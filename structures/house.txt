@@ -1,0 +1,5 @@
+log.w,planks.w,planks.w,planks.w,log.w
+planks.w,planks.p,planks.p,planks.p,planks.w
+planks.w,planks.p,planks.p,planks.p,planks.w
+planks.w,planks.p,planks.p,planks.p,planks.w
+log.w,planks.w,planks.p,planks.w,log.w
