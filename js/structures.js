@@ -50,6 +50,7 @@ async loadAll(){
 
 let list = [
 "tree"
+"house"
 ]
 
 for(let s of list){
