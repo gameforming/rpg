@@ -49,7 +49,7 @@ this.structures[name] = grid
 async loadAll(){
 
 let list = [
-"tree"
+"tree",
 "house"
 ]
 
