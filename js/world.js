@@ -11,6 +11,8 @@ this.chunkSize = 32
 
 this.chunks = {}
 
+this.structures = []
+
 }
 
 getChunkKey(cx,cy){
@@ -37,9 +39,81 @@ chunk.push(row)
 
 this.chunks[this.getChunkKey(cx,cy)] = chunk
 
+this.trySpawnStructure(cx,cy)
+
+}
+
+trySpawnStructure(cx,cy){
+
+if(!window.structures) return
+
+if(Math.random() > 0.2) return
+
+let structure = window.structures.get("tree")
+
+if(!structure) return
+
+let posX = Math.floor(Math.random()*this.chunkSize)
+let posY = Math.floor(Math.random()*this.chunkSize)
+
+let worldX = cx*this.chunkSize + posX
+let worldY = cy*this.chunkSize + posY
+
+let width = structure[0].length
+let height = structure.length
+
+if(this.checkOverlap(worldX,worldY,width,height)) return
+
+this.placeStructure(structure,worldX,worldY)
+
+}
+
+checkOverlap(x,y,w,h){
+
+for(let s of this.structures){
+
+if(
+x < s.x + s.w &&
+x + w > s.x &&
+y < s.y + s.h &&
+y + h > s.y
+){
+return true
+}
+
+}
+
+return false
+
+}
+
+placeStructure(structure,x,y){
+
+let w = structure[0].length
+let h = structure.length
+
+this.structures.push({x,y,w,h,grid:structure})
+
 }
 
 getTile(wx,wy){
+
+for(let s of this.structures){
+
+let sx = wx - s.x
+let sy = wy - s.y
+
+if(
+sx >=0 && sy >=0 &&
+sx < s.w &&
+sy < s.h
+){
+
+return s.grid[sy][sx]
+
+}
+
+}
 
 let cx = Math.floor(wx/this.chunkSize)
 let cy = Math.floor(wy/this.chunkSize)
