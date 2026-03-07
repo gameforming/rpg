@@ -9,6 +9,7 @@ let textures = {}
 
 let player
 let world
+let structures
 
 let camera = {
 x:0,
@@ -46,6 +47,9 @@ async function init(){
 
 await loadBlocks()
 await loadTextures()
+
+structures = new StructureManager(blocks)
+await structures.loadStructure("tree")
 
 player = new Player()
 
