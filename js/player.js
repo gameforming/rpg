@@ -7,7 +7,7 @@ this.y = 0
 
 this.speed = 3
 
-this.size = 32
+this.size = 20
 
 this.keys = {}
 
