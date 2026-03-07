@@ -5,9 +5,8 @@ constructor(){
 this.x = 0
 this.y = 0
 
-this.speed = 3
-
 this.size = 20
+this.speed = 3
 
 this.keys = {}
 
@@ -23,20 +22,33 @@ this.keys[e.key.toLowerCase()] = false
 
 update(){
 
-if(this.keys["w"]) this.y -= this.speed
-if(this.keys["s"]) this.y += this.speed
-if(this.keys["a"]) this.x -= this.speed
-if(this.keys["d"]) this.x += this.speed
+let newX = this.x
+let newY = this.y
+
+if(this.keys["w"]) newY -= this.speed
+if(this.keys["s"]) newY += this.speed
+if(this.keys["a"]) newX -= this.speed
+if(this.keys["d"]) newX += this.speed
+
+let tileX = Math.floor((newX+this.size/2)/32)
+let tileY = Math.floor((newY+this.size/2)/32)
+
+if(world.isWalkable(tileX,tileY)){
+
+this.x = newX
+this.y = newY
+
+}
 
 }
 
 draw(ctx,camera){
 
-ctx.fillStyle = "red"
+ctx.fillStyle="red"
 
 ctx.fillRect(
-this.x - camera.x,
-this.y - camera.y,
+this.x-camera.x,
+this.y-camera.y,
 this.size,
 this.size
 )
