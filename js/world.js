@@ -1,172 +1,112 @@
-class World{
+const canvas = document.getElementById("game")
+const ctx = canvas.getContext("2d")
 
-constructor(blocks,textures){
+canvas.width = window.innerWidth
+canvas.height = window.innerHeight
 
-this.tileSize = 32
+let blocks = {}
+let textures = {}
 
-this.blocks = blocks
-this.textures = textures
+let player
+let world
 
-this.chunkSize = 32
+window.structures = null
 
-this.chunks = {}
+let camera = {
+x:0,
+y:0
+}
 
-this.structures = []
+async function loadBlocks(){
+
+console.log("loading blocks")
+
+let res = await fetch("data/blocks.json")
+
+blocks = await res.json()
+
+console.log("blocks loaded",blocks)
 
 }
 
-getChunkKey(cx,cy){
-return cx+","+cy
-}
+async function loadTextures(){
 
-generateChunk(cx,cy){
+console.log("loading textures")
 
-let chunk = []
+for(let key in blocks){
 
-for(let y=0;y<this.chunkSize;y++){
+let texName = blocks[key].texture
 
-let row=[]
+if(textures[texName]) continue
 
-for(let x=0;x<this.chunkSize;x++){
+let img = new Image()
 
-row.push("grass")
+img.src = "assets/"+texName
 
-}
+await new Promise(resolve=>{
+img.onload = resolve
+})
 
-chunk.push(row)
+textures[texName] = img
 
-}
-
-this.chunks[this.getChunkKey(cx,cy)] = chunk
-
-this.trySpawnStructure(cx,cy)
-
-}
-
-trySpawnStructure(cx,cy){
-
-if(!window.structures) return
-
-if(Math.random() > 0.2) return
-
-let structure = window.structures.get("tree")
-
-if(!structure) return
-
-let posX = Math.floor(Math.random()*this.chunkSize)
-let posY = Math.floor(Math.random()*this.chunkSize)
-
-let worldX = cx*this.chunkSize + posX
-let worldY = cy*this.chunkSize + posY
-
-let width = structure[0].length
-let height = structure.length
-
-if(this.checkOverlap(worldX,worldY,width,height)) return
-
-this.placeStructure(structure,worldX,worldY)
-
-}
-
-checkOverlap(x,y,w,h){
-
-for(let s of this.structures){
-
-if(
-x < s.x + s.w &&
-x + w > s.x &&
-y < s.y + s.h &&
-y + h > s.y
-){
-return true
-}
-
-}
-
-return false
-
-}
-
-placeStructure(structure,x,y){
-
-let w = structure[0].length
-let h = structure.length
-
-this.structures.push({x,y,w,h,grid:structure})
-
-}
-
-getTile(wx,wy){
-
-for(let s of this.structures){
-
-let sx = wx - s.x
-let sy = wy - s.y
-
-if(
-sx >=0 && sy >=0 &&
-sx < s.w &&
-sy < s.h
-){
-
-return s.grid[sy][sx]
+console.log("loaded texture",texName)
 
 }
 
 }
 
-let cx = Math.floor(wx/this.chunkSize)
-let cy = Math.floor(wy/this.chunkSize)
+async function init(){
 
-let key = this.getChunkKey(cx,cy)
+await loadBlocks()
 
-if(!this.chunks[key]){
-this.generateChunk(cx,cy)
-}
+await loadTextures()
 
-let chunk = this.chunks[key]
+window.structures = new StructureManager(blocks)
 
-let tx = ((wx % this.chunkSize)+this.chunkSize)%this.chunkSize
-let ty = ((wy % this.chunkSize)+this.chunkSize)%this.chunkSize
+await window.structures.loadStructure("tree")
 
-return chunk[ty][tx]
+player = new Player()
 
-}
+world = new World(blocks,textures)
 
-draw(ctx,camera){
-
-let startX = Math.floor(camera.x/this.tileSize)-2
-let startY = Math.floor(camera.y/this.tileSize)-2
-
-let endX = startX + Math.ceil(canvas.width/this.tileSize)+4
-let endY = startY + Math.ceil(canvas.height/this.tileSize)+4
-
-for(let y=startY;y<endY;y++){
-
-for(let x=startX;x<endX;x++){
-
-let tile = this.getTile(x,y)
-
-let block = this.blocks[tile]
-
-if(!block) continue
-
-let tex = this.textures[block.texture]
-
-if(!tex) continue
-
-ctx.drawImage(
-tex,
-x*this.tileSize-camera.x,
-y*this.tileSize-camera.y,
-this.tileSize,
-this.tileSize
-)
+loop()
 
 }
 
-}
+function update(){
+
+player.update()
+
+camera.x = player.x - canvas.width/2
+camera.y = player.y - canvas.height/2
 
 }
 
+function draw(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+world.draw(ctx,camera)
+
+player.draw(ctx,camera)
+
 }
+
+function loop(){
+
+update()
+
+draw()
+
+requestAnimationFrame(loop)
+
+}
+
+window.addEventListener("resize",()=>{
+
+canvas.width = window.innerWidth
+canvas.height = window.innerHeight
+
+})
+
+init()
