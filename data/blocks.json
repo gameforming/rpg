@@ -1,0 +1,26 @@
+{
+ "grass":{
+  "texture":"grass.png",
+  "walkable":true
+ },
+
+ "log":{
+  "texture":"log.png",
+  "walkable":false
+ },
+
+ "planks":{
+  "texture":"planks.png",
+  "walkable":true
+ },
+
+ "leaf":{
+  "texture":"leafs.png",
+  "walkable":false
+ },
+
+ "stick":{
+  "texture":"stick.png",
+  "walkable":true
+ }
+}
