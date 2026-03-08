@@ -3,6 +3,8 @@ const ctx=canvas.getContext("2d")
 canvas.width=window.innerWidth
 canvas.height=window.innerHeight
 
+let items={}
+let itemTextures={}
 let blocks={}
 let textures={}
 let player
@@ -24,6 +26,18 @@ let mouse={x:0,y:0}
 async function loadBlocks(){
  let r=await fetch("data/blocks.json")
  blocks=await r.json()
+}
+
+async function loadItems(){
+ let r=await fetch("data/items.json")
+ items=await r.json()
+
+ for(let id in items){
+  let img=new Image()
+  img.src="assets/"+items[id].texture
+  await new Promise(res=>img.onload=res)
+  itemTextures[id]=img
+ }
 }
 
 async function loadTextures(){
@@ -105,13 +119,79 @@ function getSlot(mx,my){
  return null
 }
 
+function addItemToInventory(item){
+ for(let i=0;i<inventory.length;i++){
+  if(!inventory[i]){
+   inventory[i]=item
+   return
+  }
+ }
+}
+
+const rarityChances={
+ common:60,
+ uncommon:25,
+ rare:10,
+ epic:4,
+ legendary:1
+}
+
+function getRandomRarity(){
+ let r=Math.random()*100
+ let total=0
+ for(let k in rarityChances){
+  total+=rarityChances[k]
+  if(r<=total)return k
+ }
+ return "common"
+}
+
+function generateLoot(){
+ let rarity=getRandomRarity()
+ let pool=[]
+
+ for(let id in items){
+  if(items[id].rarity===rarity)pool.push(id)
+ }
+
+ if(pool.length===0)pool=Object.keys(items)
+
+ let id=pool[Math.floor(Math.random()*pool.length)]
+
+ return{
+  id:id,
+  name:items[id].name,
+  type:items[id].type,
+  damage:items[id].damage,
+  rarity:items[id].rarity,
+  image:itemTextures[id]
+ }
+}
+
 canvas.addEventListener("mousedown",e=>{
  mouse.x=e.clientX
  mouse.y=e.clientY
+
  let s=getSlot(mouse.x,mouse.y)
- if(!s)return
- if(s.t==="h"&&hotbar[s.i]){draggedItem=hotbar[s.i];hotbar[s.i]=null}
- if(s.t==="i"&&inventory[s.i]){draggedItem=inventory[s.i];inventory[s.i]=null}
+
+ if(s){
+  if(s.t==="h"&&hotbar[s.i]){draggedItem=hotbar[s.i];hotbar[s.i]=null}
+  if(s.t==="i"&&inventory[s.i]){draggedItem=inventory[s.i];inventory[s.i]=null}
+  return
+ }
+
+ let wx=mouse.x+camera.x
+ let wy=mouse.y+camera.y
+
+ let tx=Math.floor(wx/world.tileSize)
+ let ty=Math.floor(wy/world.tileSize)
+
+ let tile=world.getTile(tx,ty)
+
+ if(tile&&tile.block==="chest"){
+  let loot=generateLoot()
+  addItemToInventory(loot)
+ }
 })
 
 canvas.addEventListener("mouseup",e=>{
@@ -175,14 +255,17 @@ window.addEventListener("resize",()=>{
 async function init(){
  await loadBlocks()
  await loadTextures()
+ await loadItems()
  window.structures=new StructureManager(blocks)
  await window.structures.loadAll()
  player=new Player()
  world=new World(blocks,textures)
+
  let img=new Image()
  img.src="assets/stick.png"
  await new Promise(r=>img.onload=r)
  hotbar[0]={name:"Stick",type:"basic",image:img}
+
  loop()
 }
 
