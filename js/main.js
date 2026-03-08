@@ -9,11 +9,15 @@ let player
 let world
 let camera={x:0,y:0}
 
-let inventory=[]
+let inventory=Array(27).fill(null)
 let hotbar=Array(9).fill(null)
 let selectedHotbar=0
+let inventoryOpen=false
 
 const SLOT_SIZE=48
+const INV_COLS=9
+const INV_ROWS=3
+
 let draggedItem=null
 let mouse={x:0,y:0}
 
@@ -33,10 +37,18 @@ async function loadTextures(){
  }
 }
 
-function drawHotbar(){
- let y=canvas.height-SLOT_SIZE-10
+function hotbarStartX(){
  let total=hotbar.length*SLOT_SIZE+(hotbar.length-1)*5
- let startX=(canvas.width-total)/2
+ return (canvas.width-total)/2
+}
+
+function hotbarY(){
+ return canvas.height-SLOT_SIZE-10
+}
+
+function drawHotbar(){
+ let y=hotbarY()
+ let startX=hotbarStartX()
  for(let i=0;i<hotbar.length;i++){
   let x=startX+i*(SLOT_SIZE+5)
   ctx.fillStyle=i===selectedHotbar?"yellow":"rgba(0,0,0,0.6)"
@@ -46,34 +58,79 @@ function drawHotbar(){
  }
 }
 
+function inventoryStart(){
+ let gridWidth=INV_COLS*SLOT_SIZE+(INV_COLS-1)*5
+ let x=(canvas.width-gridWidth)/2
+ let y=hotbarY()-INV_ROWS*(SLOT_SIZE+5)-30
+ return {x,y}
+}
+
+function drawInventory(){
+ if(!inventoryOpen)return
+ let start=inventoryStart()
+ for(let r=0;r<INV_ROWS;r++){
+  for(let c=0;c<INV_COLS;c++){
+   let i=r*INV_COLS+c
+   let x=start.x+c*(SLOT_SIZE+5)
+   let y=start.y+r*(SLOT_SIZE+5)
+   ctx.fillStyle="rgba(0,0,0,0.6)"
+   ctx.fillRect(x,y,SLOT_SIZE,SLOT_SIZE)
+   let item=inventory[i]
+   if(item&&item.image)ctx.drawImage(item.image,x+4,y+4,SLOT_SIZE-8,SLOT_SIZE-8)
+  }
+ }
+}
+
+function slotAt(mx,my){
+ let startX=hotbarStartX()
+ let y=hotbarY()
+ for(let i=0;i<hotbar.length;i++){
+  let x=startX+i*(SLOT_SIZE+5)
+  if(mx>x&&mx<x+SLOT_SIZE&&my>y&&my<y+SLOT_SIZE)return{type:"hotbar",i}
+ }
+ if(inventoryOpen){
+  let start=inventoryStart()
+  for(let r=0;r<INV_ROWS;r++){
+   for(let c=0;c<INV_COLS;c++){
+    let i=r*INV_COLS+c
+    let x=start.x+c*(SLOT_SIZE+5)
+    let y=start.y+r*(SLOT_SIZE+5)
+    if(mx>x&&mx<x+SLOT_SIZE&&my>y&&my<y+SLOT_SIZE)return{type:"inv",i}
+   }
+  }
+ }
+ return null
+}
+
 canvas.addEventListener("mousedown",e=>{
  mouse.x=e.clientX
  mouse.y=e.clientY
- let y=canvas.height-SLOT_SIZE-10
- let total=hotbar.length*SLOT_SIZE+(hotbar.length-1)*5
- let startX=(canvas.width-total)/2
- for(let i=0;i<hotbar.length;i++){
-  let x=startX+i*(SLOT_SIZE+5)
-  if(mouse.x>x&&mouse.x<x+SLOT_SIZE&&mouse.y>y&&mouse.y<y+SLOT_SIZE){
-   if(hotbar[i]){draggedItem=hotbar[i];hotbar[i]=null}
-  }
+ let s=slotAt(mouse.x,mouse.y)
+ if(!s)return
+ if(s.type==="hotbar"){
+  if(hotbar[s.i]){draggedItem=hotbar[s.i];hotbar[s.i]=null}
+ }
+ if(s.type==="inv"){
+  if(inventory[s.i]){draggedItem=inventory[s.i];inventory[s.i]=null}
  }
 })
 
 canvas.addEventListener("mouseup",e=>{
- if(!draggedItem)return
  mouse.x=e.clientX
  mouse.y=e.clientY
- let y=canvas.height-SLOT_SIZE-10
- let total=hotbar.length*SLOT_SIZE+(hotbar.length-1)*5
- let startX=(canvas.width-total)/2
- for(let i=0;i<hotbar.length;i++){
-  let x=startX+i*(SLOT_SIZE+5)
-  if(mouse.x>x&&mouse.x<x+SLOT_SIZE&&mouse.y>y&&mouse.y<y+SLOT_SIZE){
-   if(!hotbar[i]){hotbar[i]=draggedItem;draggedItem=null;return}
+ if(!draggedItem)return
+ let s=slotAt(mouse.x,mouse.y)
+ if(s){
+  if(s.type==="hotbar"){
+   if(!hotbar[s.i]){hotbar[s.i]=draggedItem;draggedItem=null;return}
+  }
+  if(s.type==="inv"){
+   if(!inventory[s.i]){inventory[s.i]=draggedItem;draggedItem=null;return}
   }
  }
- inventory.push(draggedItem)
+ for(let i=0;i<inventory.length;i++){
+  if(!inventory[i]){inventory[i]=draggedItem;draggedItem=null;return}
+ }
  draggedItem=null
 })
 
@@ -83,8 +140,13 @@ canvas.addEventListener("mousemove",e=>{
 })
 
 window.addEventListener("wheel",e=>{
+ if(inventoryOpen)return
  if(e.deltaY<0)selectedHotbar=(selectedHotbar+1)%hotbar.length
  if(e.deltaY>0)selectedHotbar=(selectedHotbar-1+hotbar.length)%hotbar.length
+})
+
+window.addEventListener("keydown",e=>{
+ if(e.key.toLowerCase()==="e")inventoryOpen=!inventoryOpen
 })
 
 function update(){
@@ -97,6 +159,7 @@ function draw(){
  ctx.clearRect(0,0,canvas.width,canvas.height)
  world.draw(ctx,camera)
  player.draw(ctx,camera)
+ drawInventory()
  drawHotbar()
  if(draggedItem&&draggedItem.image){
   ctx.drawImage(draggedItem.image,mouse.x-SLOT_SIZE/2,mouse.y-SLOT_SIZE/2,SLOT_SIZE,SLOT_SIZE)
