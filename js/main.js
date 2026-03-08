@@ -36,7 +36,7 @@ async function loadItems(){
   let img=new Image()
   img.src="assets/"+items[id].texture
   await new Promise(res=>img.onload=res)
-  itemTextures[id]=img
+  itemTextures[id]=await makeTransparent(img)
  }
 }
 
