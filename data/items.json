@@ -1,10 +1,10 @@
 {
  "wood_sword":{
-  "name":"Wood Sword",
+  "name":"stick",
   "type":"weapon",
   "rarity":"common",
-  "damage":3,
-  "texture":"wood_sword.png"
+  "damage":2,
+  "texture":"stick.png"
  },
 
  "stone_sword":{
