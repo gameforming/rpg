@@ -17,7 +17,7 @@ this.structures = []
 
 getChunkKey(cx,cy){
 
-return cx+","+cy
+return cx + "," + cy
 
 }
 
@@ -31,7 +31,10 @@ let row=[]
 
 for(let x=0;x<this.chunkSize;x++){
 
-row.push("grass")
+row.push({
+block:"grass",
+type:"p"
+})
 
 }
 
@@ -49,30 +52,25 @@ trySpawnStructure(cx,cy){
 
 if(!window.structures) return
 
-if(Math.random() > 0.25) return
+// spawn chance
+if(Math.random() > 0.6) return
 
 let structure = window.structures.getRandom()
 
 if(!structure) return
 
-let posX = Math.floor(Math.random()*this.chunkSize)
-let posY = Math.floor(Math.random()*this.chunkSize)
+let width = structure[0].length
+let height = structure.length
+
+let posX = Math.floor(Math.random()*(this.chunkSize-width))
+let posY = Math.floor(Math.random()*(this.chunkSize-height))
 
 let worldX = cx*this.chunkSize + posX
 let worldY = cy*this.chunkSize + posY
 
-let w = structure[0].length
-let h = structure.length
+if(this.checkOverlap(worldX,worldY,width,height)) return
 
-if(this.checkOverlap(worldX,worldY,w,h)) return
-
-this.structures.push({
-x:worldX,
-y:worldY,
-w:w,
-h:h,
-grid:structure
-})
+this.placeStructure(structure,worldX,worldY)
 
 }
 
@@ -86,9 +84,7 @@ x + w > s.x &&
 y < s.y + s.h &&
 y + h > s.y
 ){
-
 return true
-
 }
 
 }
@@ -97,7 +93,22 @@ return false
 
 }
 
-getTile(wx,wy){
+placeStructure(structure,x,y){
+
+let w = structure[0].length
+let h = structure.length
+
+this.structures.push({
+x:x,
+y:y,
+w:w,
+h:h,
+grid:structure
+})
+
+}
+
+getStructureTile(wx,wy){
 
 for(let s of this.structures){
 
@@ -105,8 +116,10 @@ let sx = wx - s.x
 let sy = wy - s.y
 
 if(
-sx>=0 && sy>=0 &&
-sx<s.w && sy<s.h
+sx >= 0 &&
+sy >= 0 &&
+sx < s.w &&
+sy < s.h
 ){
 
 return s.grid[sy][sx]
@@ -115,15 +128,19 @@ return s.grid[sy][sx]
 
 }
 
+return null
+
+}
+
+getBaseTile(wx,wy){
+
 let cx = Math.floor(wx/this.chunkSize)
 let cy = Math.floor(wy/this.chunkSize)
 
 let key = this.getChunkKey(cx,cy)
 
 if(!this.chunks[key]){
-
 this.generateChunk(cx,cy)
-
 }
 
 let chunk = this.chunks[key]
@@ -131,7 +148,19 @@ let chunk = this.chunks[key]
 let tx = ((wx % this.chunkSize)+this.chunkSize)%this.chunkSize
 let ty = ((wy % this.chunkSize)+this.chunkSize)%this.chunkSize
 
-return {block:chunk[ty][tx],type:"p"}
+return chunk[ty][tx]
+
+}
+
+getTile(wx,wy){
+
+let structureTile = this.getStructureTile(wx,wy)
+
+if(structureTile){
+return structureTile
+}
+
+return this.getBaseTile(wx,wy)
 
 }
 
