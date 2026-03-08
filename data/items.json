@@ -1,0 +1,41 @@
+{
+ "wood_sword":{
+  "name":"Wood Sword",
+  "type":"weapon",
+  "rarity":"common",
+  "damage":3,
+  "texture":"wood_sword.png"
+ },
+
+ "stone_sword":{
+  "name":"Stone Sword",
+  "type":"weapon",
+  "rarity":"common",
+  "damage":4,
+  "texture":"stone_sword.png"
+ },
+
+ "iron_sword":{
+  "name":"Iron Sword",
+  "type":"weapon",
+  "rarity":"uncommon",
+  "damage":6,
+  "texture":"iron_sword.png"
+ },
+
+ "gold_sword":{
+  "name":"Gold Sword",
+  "type":"weapon",
+  "rarity":"rare",
+  "damage":8,
+  "texture":"gold_sword.png"
+ },
+
+ "diamond_sword":{
+  "name":"Diamond Sword",
+  "type":"weapon",
+  "rarity":"epic",
+  "damage":11,
+  "texture":"diamond_sword.png"
+ }
+}
