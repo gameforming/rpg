@@ -15,29 +15,29 @@ let selectedHotbar=0
 let inventoryOpen=false
 
 const SLOT_SIZE=48
-const INV_COLS=9
-const INV_ROWS=3
+const COLS=9
+const ROWS=3
 
 let draggedItem=null
 let mouse={x:0,y:0}
 
 async function loadBlocks(){
- let res=await fetch("data/blocks.json")
- blocks=await res.json()
+ let r=await fetch("data/blocks.json")
+ blocks=await r.json()
 }
 
 async function loadTextures(){
- for(let key in blocks){
-  let texName=blocks[key].texture
-  if(textures[texName])continue
+ for(let k in blocks){
+  let t=blocks[k].texture
+  if(textures[t])continue
   let img=new Image()
-  img.src="assets/"+texName
+  img.src="assets/"+t
   await new Promise(r=>img.onload=r)
-  textures[texName]=img
+  textures[t]=img
  }
 }
 
-function hotbarStartX(){
+function hotbarX(){
  let total=hotbar.length*SLOT_SIZE+(hotbar.length-1)*5
  return (canvas.width-total)/2
 }
@@ -46,11 +46,19 @@ function hotbarY(){
  return canvas.height-SLOT_SIZE-10
 }
 
+function invStart(){
+ let w=COLS*SLOT_SIZE+(COLS-1)*5
+ return{
+  x:(canvas.width-w)/2,
+  y:hotbarY()-ROWS*(SLOT_SIZE+5)-30
+ }
+}
+
 function drawHotbar(){
  let y=hotbarY()
- let startX=hotbarStartX()
+ let sx=hotbarX()
  for(let i=0;i<hotbar.length;i++){
-  let x=startX+i*(SLOT_SIZE+5)
+  let x=sx+i*(SLOT_SIZE+5)
   ctx.fillStyle=i===selectedHotbar?"yellow":"rgba(0,0,0,0.6)"
   ctx.fillRect(x,y,SLOT_SIZE,SLOT_SIZE)
   let item=hotbar[i]
@@ -58,21 +66,14 @@ function drawHotbar(){
  }
 }
 
-function inventoryStart(){
- let gridWidth=INV_COLS*SLOT_SIZE+(INV_COLS-1)*5
- let x=(canvas.width-gridWidth)/2
- let y=hotbarY()-INV_ROWS*(SLOT_SIZE+5)-30
- return {x,y}
-}
-
 function drawInventory(){
  if(!inventoryOpen)return
- let start=inventoryStart()
- for(let r=0;r<INV_ROWS;r++){
-  for(let c=0;c<INV_COLS;c++){
-   let i=r*INV_COLS+c
-   let x=start.x+c*(SLOT_SIZE+5)
-   let y=start.y+r*(SLOT_SIZE+5)
+ let s=invStart()
+ for(let r=0;r<ROWS;r++){
+  for(let c=0;c<COLS;c++){
+   let i=r*COLS+c
+   let x=s.x+c*(SLOT_SIZE+5)
+   let y=s.y+r*(SLOT_SIZE+5)
    ctx.fillStyle="rgba(0,0,0,0.6)"
    ctx.fillRect(x,y,SLOT_SIZE,SLOT_SIZE)
    let item=inventory[i]
@@ -81,52 +82,46 @@ function drawInventory(){
  }
 }
 
-function slotAt(mx,my){
- let startX=hotbarStartX()
+function getSlot(mx,my){
+ let sx=hotbarX()
  let y=hotbarY()
  for(let i=0;i<hotbar.length;i++){
-  let x=startX+i*(SLOT_SIZE+5)
-  if(mx>x&&mx<x+SLOT_SIZE&&my>y&&my<y+SLOT_SIZE)return{type:"hotbar",i}
+  let x=sx+i*(SLOT_SIZE+5)
+  if(mx>x&&mx<x+SLOT_SIZE&&my>y&&my<y+SLOT_SIZE)return{t:"h",i}
  }
+
  if(inventoryOpen){
-  let start=inventoryStart()
-  for(let r=0;r<INV_ROWS;r++){
-   for(let c=0;c<INV_COLS;c++){
-    let i=r*INV_COLS+c
-    let x=start.x+c*(SLOT_SIZE+5)
-    let y=start.y+r*(SLOT_SIZE+5)
-    if(mx>x&&mx<x+SLOT_SIZE&&my>y&&my<y+SLOT_SIZE)return{type:"inv",i}
+  let s=invStart()
+  for(let r=0;r<ROWS;r++){
+   for(let c=0;c<COLS;c++){
+    let i=r*COLS+c
+    let x=s.x+c*(SLOT_SIZE+5)
+    let y=s.y+r*(SLOT_SIZE+5)
+    if(mx>x&&mx<x+SLOT_SIZE&&my>y&&my<y+SLOT_SIZE)return{t:"i",i}
    }
   }
  }
+
  return null
 }
 
 canvas.addEventListener("mousedown",e=>{
  mouse.x=e.clientX
  mouse.y=e.clientY
- let s=slotAt(mouse.x,mouse.y)
+ let s=getSlot(mouse.x,mouse.y)
  if(!s)return
- if(s.type==="hotbar"){
-  if(hotbar[s.i]){draggedItem=hotbar[s.i];hotbar[s.i]=null}
- }
- if(s.type==="inv"){
-  if(inventory[s.i]){draggedItem=inventory[s.i];inventory[s.i]=null}
- }
+ if(s.t==="h"&&hotbar[s.i]){draggedItem=hotbar[s.i];hotbar[s.i]=null}
+ if(s.t==="i"&&inventory[s.i]){draggedItem=inventory[s.i];inventory[s.i]=null}
 })
 
 canvas.addEventListener("mouseup",e=>{
  mouse.x=e.clientX
  mouse.y=e.clientY
  if(!draggedItem)return
- let s=slotAt(mouse.x,mouse.y)
+ let s=getSlot(mouse.x,mouse.y)
  if(s){
-  if(s.type==="hotbar"){
-   if(!hotbar[s.i]){hotbar[s.i]=draggedItem;draggedItem=null;return}
-  }
-  if(s.type==="inv"){
-   if(!inventory[s.i]){inventory[s.i]=draggedItem;draggedItem=null;return}
-  }
+  if(s.t==="h"&&!hotbar[s.i]){hotbar[s.i]=draggedItem;draggedItem=null;return}
+  if(s.t==="i"&&!inventory[s.i]){inventory[s.i]=draggedItem;draggedItem=null;return}
  }
  for(let i=0;i<inventory.length;i++){
   if(!inventory[i]){inventory[i]=draggedItem;draggedItem=null;return}
