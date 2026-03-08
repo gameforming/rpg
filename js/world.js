@@ -13,7 +13,6 @@ class World {
     this.structureChances = {
       tree: 0.8,
       house: 0.2
-      // kan later uitbreiden: ruins:0.05, dungeon:0.01
     }
 
     console.log("WORLD: constructor klaar, structuur kansen:", this.structureChances)
@@ -43,10 +42,8 @@ class World {
   }
 
   spawnStructuresInChunk(cx, cy) {
-    // max 3 structures per chunk
     let maxStructures = 3
     let spawned = 0
-
     let keys = Object.keys(this.structureChances)
 
     while (spawned < maxStructures) {
@@ -96,9 +93,9 @@ class World {
   checkOverlap(x, y, w, h) {
     for (let s of this.structures) {
       if (x < s.x + s.w &&
-        x + w > s.x &&
-        y < s.y + s.h &&
-        y + h > s.y) {
+          x + w > s.x &&
+          y < s.y + s.h &&
+          y + h > s.y) {
         return true
       }
     }
@@ -109,7 +106,19 @@ class World {
     let w = structure[0].length
     let h = structure.length
 
-    this.structures.push({ x, y, w, h, grid: structure })
+    // loop door alle tiles en zet chest-luck indien LTxx
+    let grid = structure.map(row => row.slice())
+    for (let sy = 0; sy < h; sy++) {
+      for (let sx = 0; sx < w; sx++) {
+        let cell = grid[sy][sx]
+        if (typeof cell === "string" && cell.startsWith("LT")) {
+          let luck = parseInt(cell.substring(2)) || 1
+          grid[sy][sx] = { block: "chest", type: "c", luck }
+        }
+      }
+    }
+
+    this.structures.push({ x, y, w, h, grid })
     console.log("WORLD: structure geplaatst", structure, "op", x, y)
   }
 
@@ -164,7 +173,6 @@ class World {
     let endX = startX + Math.ceil(canvas.width / this.tileSize) + 4
     let endY = startY + Math.ceil(canvas.height / this.tileSize) + 4
 
-    // eerst grass
     for (let y = startY; y < endY; y++) {
       for (let x = startX; x < endX; x++) {
         let base = this.getBaseTile(x, y)
@@ -176,7 +184,6 @@ class World {
       }
     }
 
-    // dan structures
     for (let y = startY; y < endY; y++) {
       for (let x = startX; x < endX; x++) {
         let structureTile = this.getStructureTile(x, y)
