@@ -31,7 +31,6 @@ async function loadBlocks(){
 async function loadItems(){
  let r=await fetch("data/items.json")
  items=await r.json()
-
  for(let id in items){
   let img=new Image()
   img.src="assets/"+items[id].texture
@@ -51,22 +50,9 @@ async function loadTextures(){
  }
 }
 
-function hotbarX(){
- let total=hotbar.length*SLOT_SIZE+(hotbar.length-1)*5
- return (canvas.width-total)/2
-}
-
-function hotbarY(){
- return canvas.height-SLOT_SIZE-10
-}
-
-function invStart(){
- let w=COLS*SLOT_SIZE+(COLS-1)*5
- return{
-  x:(canvas.width-w)/2,
-  y:hotbarY()-ROWS*(SLOT_SIZE+5)-30
- }
-}
+function hotbarX(){let total=hotbar.length*SLOT_SIZE+(hotbar.length-1)*5; return (canvas.width-total)/2}
+function hotbarY(){return canvas.height-SLOT_SIZE-10}
+function invStart(){let w=COLS*SLOT_SIZE+(COLS-1)*5; return {x:(canvas.width-w)/2,y:hotbarY()-ROWS*(SLOT_SIZE+5)-30}}
 
 function drawHotbar(){
  let y=hotbarY()
@@ -128,52 +114,39 @@ function addItemToInventory(item){
  }
 }
 
-const rarityChances={
- common:60,
- uncommon:25,
- rare:10,
- epic:4,
- legendary:1
-}
+const baseRarityChances={common:60,uncommon:25,rare:10,epic:4,legendary:1}
 
 function getRandomRarity(){
  let r=Math.random()*100
  let total=0
- for(let k in rarityChances){
-  total+=rarityChances[k]
+ for(let k in baseRarityChances){
+  total+=baseRarityChances[k]
   if(r<=total)return k
  }
  return "common"
 }
 
-function generateLoot(){
- let rarity=getRandomRarity()
+function generateLoot(luck=1){
+ // Pas rarity kansen aan op basis van luck
+ let chances={}
+ for(let k in baseRarityChances)chances[k]=baseRarityChances[k]*(1+luck/100)
+ let total=0
+ for(let k in chances)total+=chances[k]
+ let r=Math.random()*total
+ let sum=0
+ let selected="common"
+ for(let k in chances){sum+=chances[k]; if(r<=sum){selected=k; break}}
  let pool=[]
-
- for(let id in items){
-  if(items[id].rarity===rarity)pool.push(id)
- }
-
+ for(let id in items)if(items[id].rarity===selected)pool.push(id)
  if(pool.length===0)pool=Object.keys(items)
-
  let id=pool[Math.floor(Math.random()*pool.length)]
-
- return{
-  id:id,
-  name:items[id].name,
-  type:items[id].type,
-  damage:items[id].damage,
-  rarity:items[id].rarity,
-  image:itemTextures[id]
- }
+ return {id:id,name:items[id].name,type:items[id].type,damage:items[id].damage,rarity:items[id].rarity,image:itemTextures[id]}
 }
 
 canvas.addEventListener("mousedown",e=>{
  mouse.x=e.clientX
  mouse.y=e.clientY
-
  let s=getSlot(mouse.x,mouse.y)
-
  if(s){
   if(s.t==="h"&&hotbar[s.i]){draggedItem=hotbar[s.i];hotbar[s.i]=null}
   if(s.t==="i"&&inventory[s.i]){draggedItem=inventory[s.i];inventory[s.i]=null}
@@ -182,14 +155,12 @@ canvas.addEventListener("mousedown",e=>{
 
  let wx=mouse.x+camera.x
  let wy=mouse.y+camera.y
-
  let tx=Math.floor(wx/world.tileSize)
  let ty=Math.floor(wy/world.tileSize)
-
  let tile=world.getTile(tx,ty)
 
  if(tile&&tile.block==="chest"){
-  let loot=generateLoot()
+  let loot=generateLoot(tile.luck||1)
   addItemToInventory(loot)
  }
 })
@@ -200,29 +171,22 @@ canvas.addEventListener("mouseup",e=>{
  if(!draggedItem)return
  let s=getSlot(mouse.x,mouse.y)
  if(s){
-  if(s.t==="h"&&!hotbar[s.i]){hotbar[s.i]=draggedItem;draggedItem=null;return}
-  if(s.t==="i"&&!inventory[s.i]){inventory[s.i]=draggedItem;draggedItem=null;return}
+  if(s.t==="h"&&!hotbar[s.i]){hotbar[s.i]=draggedItem; draggedItem=null; return}
+  if(s.t==="i"&&!inventory[s.i]){inventory[s.i]=draggedItem; draggedItem=null; return}
  }
  for(let i=0;i<inventory.length;i++){
-  if(!inventory[i]){inventory[i]=draggedItem;draggedItem=null;return}
+  if(!inventory[i]){inventory[i]=draggedItem; draggedItem=null; return}
  }
  draggedItem=null
 })
 
-canvas.addEventListener("mousemove",e=>{
- mouse.x=e.clientX
- mouse.y=e.clientY
-})
-
+canvas.addEventListener("mousemove",e=>{mouse.x=e.clientX; mouse.y=e.clientY})
 window.addEventListener("wheel",e=>{
  if(inventoryOpen)return
  if(e.deltaY<0)selectedHotbar=(selectedHotbar+1)%hotbar.length
  if(e.deltaY>0)selectedHotbar=(selectedHotbar-1+hotbar.length)%hotbar.length
 })
-
-window.addEventListener("keydown",e=>{
- if(e.key.toLowerCase()==="e")inventoryOpen=!inventoryOpen
-})
+window.addEventListener("keydown",e=>{if(e.key.toLowerCase()==="e")inventoryOpen=!inventoryOpen})
 
 function update(){
  player.update()
@@ -241,11 +205,7 @@ function draw(){
  }
 }
 
-function loop(){
- update()
- draw()
- requestAnimationFrame(loop)
-}
+function loop(){update(); draw(); requestAnimationFrame(loop)}
 
 window.addEventListener("resize",()=>{
  canvas.width=window.innerWidth
