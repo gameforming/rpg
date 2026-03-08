@@ -224,6 +224,7 @@ async function init(){
  let img=new Image()
  img.src="assets/stick.png"
  await new Promise(r=>img.onload=r)
+ img = await makeTransparent(img) // <<< transparantie toepassen
  hotbar[0]={name:"Stick",type:"basic",image:img}
 
  loop()
