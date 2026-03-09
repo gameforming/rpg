@@ -159,12 +159,14 @@ canvas.addEventListener("mousedown",e=>{
  let tile=world.getTile(tx,ty)
 
  if(tile&&tile.block==="chest"){
-  if(!tile.opened){
-   let loot=generateLoot(tile.luck||1)
-   addItemToInventory(loot)
-   tile.opened=true
-  }
+ let key=tx+"_"+ty
+
+ if(!openedChests[key]){
+  let loot=generateLoot(tile.luck||1)
+  addItemToInventory(loot)
+  openedChests[key]=true
  }
+}
 })
 
 canvas.addEventListener("mouseup",e=>{
