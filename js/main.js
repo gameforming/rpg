@@ -1,5 +1,8 @@
-const canvas=document.getElementById("game")
-const ctx=canvas.getContext("2d")
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const world = new World(canvas); // ÉÉN instance
+
 canvas.width=window.innerWidth
 canvas.height=window.innerHeight
 import { Player } from "./player.js";
