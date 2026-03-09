@@ -33,7 +33,10 @@ class Combat {
   attack(enemies, weapon, mouseX, mouseY, camera, time){
     if(!weapon || !this.canAttack(time)) return
     this.lastAttack = time
-
+    
+    player.weaponSwing = 0;
+    player.weaponSwinging = true;
+    
     let wx = this.player.x
     let wy = this.player.y
 
