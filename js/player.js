@@ -78,7 +78,7 @@ this.size
 
 }
 
-}
+
 drawWeapon(ctx, camera, selectedItem){
 
 if(!selectedItem) return;
@@ -122,4 +122,5 @@ texture,
 
 ctx.restore();
 
+}
 }
