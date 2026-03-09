@@ -230,7 +230,11 @@ function update(){
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height)
   world.draw(ctx,camera)
-  player.draw(ctx,camera)
+  player.draw(ctx, camera);
+
+  const selectedItem = hotbar[selectedHotbar];
+
+  player.drawWeapon(ctx, camera, selectedItem);
   drawInventory()
   drawHotbar()
   if(draggedItem && draggedItem.image){
