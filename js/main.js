@@ -153,10 +153,28 @@ canvas.addEventListener("mousedown", e => {
 
   let s = getSlot(mouse.x, mouse.y)
   if(s){
-    if(s.t==="h" && hotbar[s.i]) { draggedItem = hotbar[s.i]; hotbar[s.i]=null }
-    if(s.t==="i" && inventory[s.i]) { draggedItem = inventory[s.i]; inventory[s.i]=null }
+    if(s.t==="h" && hotbar[s.i]) { draggedItem = hotbar[s.i]; hotbar[s.i] = null }
+    if(s.t==="i" && inventory[s.i]) { draggedItem = inventory[s.i]; inventory[s.i] = null }
     return
   }
+
+  // aanval als speler een wapen heeft in geselecteerde hotbar
+  let weapon = hotbar[selectedHotbar]
+  if(weapon && weapon.damage){
+    combat.attack(enemies, weapon, mouse.x, mouse.y, camera, Date.now())
+  }
+
+  // chest openen
+  let wx = mouse.x + camera.x
+  let wy = mouse.y + camera.y
+  let tx = Math.floor(wx/world.tileSize)
+  let ty = Math.floor(wy/world.tileSize)
+  let tile = world.getTile(tx, ty)
+  if(tile && tile.block === "chest"){
+    let loot = generateLoot(tile.luck || 1)
+    addItemToInventory(loot)
+  }
+})
 
   let wx = mouse.x + camera.x
   let wy = mouse.y + camera.y
@@ -219,15 +237,17 @@ function update(){
 }
 
 function draw(){
- ctx.clearRect(0,0,canvas.width,canvas.height)
- world.draw(ctx,camera)
- player.draw(ctx,camera)
- drawInventory()
- drawHotbar()
- if(draggedItem&&draggedItem.image){
-  ctx.drawImage(draggedItem.image,mouse.x-SLOT_SIZE/2,mouse.y-SLOT_SIZE/2,SLOT_SIZE,SLOT_SIZE)
- combat.drawUI(ctx, canvas)
- }
+  ctx.clearRect(0,0,canvas.width,canvas.height)
+  world.draw(ctx,camera)
+  player.draw(ctx,camera)
+  drawInventory()
+  drawHotbar()
+  if(draggedItem && draggedItem.image){
+    ctx.drawImage(draggedItem.image, mouse.x-SLOT_SIZE/2, mouse.y-SLOT_SIZE/2, SLOT_SIZE, SLOT_SIZE)
+  }
+  if(combat){
+    combat.drawUI(ctx, canvas)
+  }
 }
 
 function loop(){update(); draw(); requestAnimationFrame(loop)}
@@ -241,25 +261,21 @@ async function init(){
   await loadBlocks()
   await loadTextures()
   await loadItems()
-
   window.structures = new StructureManager(blocks)
   await window.structures.loadAll()
-
   player = new Player()
   world = new World(blocks, textures)
 
-  // Combat systeem initialiseren
+  // Combat instantie aanmaken
   combat = new Combat(player)
 
-  // Start weapon toevoegen en transparant maken
   let img = new Image()
   img.src = "assets/stick.png"
   await new Promise(r => img.onload = r)
   img = await makeTransparent(img)
-  hotbar[0] = {name:"Stick", type:"basic", image:img}
-
-  // Eventueel meer startitems toevoegen hier
+  hotbar[0] = { name:"Stick", type:"basic", image:img, damage:2, range:{width:3,length:3} }
 
   loop()
 }
+
 init()
