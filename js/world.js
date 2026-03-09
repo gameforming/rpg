@@ -1,4 +1,4 @@
-export class World {
+export class world {
   constructor(blocks, textures) {
     console.log("WORLD: constructor gestart")
 
