@@ -8,6 +8,7 @@ canvas.height=window.innerHeight
 import { Player } from "./player.js";
 import { makeTransparent } from "./textureUtils.js"
 import { World } from "./world.js"
+import { StructureManager } from "./structures.js"
 
 
 
