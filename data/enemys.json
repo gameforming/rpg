@@ -7,25 +7,7 @@
   "range":{"width":3,"length":5},
   "weapon":"stick",
   "attackfunction":"attackSword"
- },
-
- "skeleton":{
-  "texture":"skeleton.png",
-  "hp":20,
-  "speed":0.8,
-  "damage":4,
-  "range":{"width":2,"length":7},
-  "weapon":"stone_sword",
-  "attackfunction":"attackSword"
- },
-
- "knight":{
-  "texture":"knight.png",
-  "hp":60,
-  "speed":0.5,
-  "damage":8,
-  "range":{"width":3,"length":9},
-  "weapon":"iron_sword",
-  "attackfunction":"attackSword"
  }
+
+ 
 }
