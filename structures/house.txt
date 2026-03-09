@@ -1,5 +1,5 @@
 log.w,log.w,log.w,log.w,log.w
-log.w,planks.p,planks.p,LT10,log.w
+log.w,planks.p,planks.p,chest.LT10,log.w
 log.w,planks.p,planks.p,planks.p,log.w
 log.w,planks.p,planks.p,planks.p,log.w
 log.w,log.w,planks.p,log.w,log.w
