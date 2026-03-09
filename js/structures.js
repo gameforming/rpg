@@ -1,4 +1,4 @@
-class StructureManager {
+export class StructureManager {
 
   constructor(blocks) {
     this.blocks = blocks
