@@ -1,4 +1,4 @@
-async function makeTransparent(img){
+async function maketransparent(img){
   let c=document.createElement("canvas")
   c.width=img.width
   c.height=img.height
