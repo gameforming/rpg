@@ -2,6 +2,7 @@ import { Player } from "./player.js";
 import { makeTransparent } from "./textureUtils.js"
 import { World } from "./world.js"
 import { StructureManager } from "./structures.js"
+import { Combat } from "./combat.js"
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
