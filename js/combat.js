@@ -1,14 +1,14 @@
 class Combat {
-  constructor(player) {
+  constructor(player){
     this.player = player
     this.level = 1
     this.xp = 0
-    this.maxXp = 100 + 10 * this.level
+    this.maxXp = 100 + 10*this.level
     this.lastAttack = 0
-    this.attackCooldown = 1000 // 1 seconde tussen clicks
+    this.attackCooldown = 1000
   }
 
-  gainXp(amount) {
+  gainXp(amount){
     this.xp += amount
     while(this.xp >= this.maxXp){
       this.xp -= this.maxXp
@@ -16,14 +16,12 @@ class Combat {
     }
   }
 
-  levelUp() {
+  levelUp(){
     this.level++
-    this.maxXp = Math.floor(this.maxXp * 1.5)
+    this.maxXp = Math.floor(this.maxXp*1.5)
   }
 
-  canAttack(time){
-    return time - this.lastAttack >= this.attackCooldown
-  }
+  canAttack(time){ return time - this.lastAttack >= this.attackCooldown }
 
   attack(enemies, weapon, mouseX, mouseY, camera, time){
     if(!this.canAttack(time)) return
@@ -33,16 +31,14 @@ class Combat {
     let wy = this.player.y
 
     let range = weapon.range || {width:3,length:3}
-    let attackWidth = range.width * world.tileSize
-    let attackLength = range.length * world.tileSize
+    let attackWidth = range.width * window.world.tileSize
+    let attackLength = range.length * window.world.tileSize
 
-    // richting van muis
     let dx = mouseX + camera.x - wx
     let dy = mouseY + camera.y - wy
     let angle = Math.atan2(dy, dx)
+    let halfW = attackWidth / 2
 
-    // simpele axis-aligned attack box
-    let halfW = attackWidth/2
     let attackRect = {
       x: wx + Math.cos(angle)*attackLength - halfW,
       y: wy + Math.sin(angle)*attackLength - halfW,
@@ -55,13 +51,13 @@ class Combat {
       if(e.x > attackRect.x && e.x < attackRect.x + attackRect.w &&
          e.y > attackRect.y && e.y < attackRect.y + attackRect.h){
         e.hp -= weapon.damage
-        if(e.hp <=0) e.dead = true
+        if(e.hp <= 0) e.dead = true
         this.gainXp(10)
       }
     }
   }
 
-  drawUI(ctx, canvas){
+  drawUI(ctx,canvas){
     // HP linksboven
     let hpBarWidth = 200
     let hp = this.player.hp
@@ -74,7 +70,7 @@ class Combat {
     ctx.strokeRect(20,20,hpBarWidth,20)
     ctx.fillStyle="white"
     ctx.font="16px Arial"
-    ctx.fillText(`HP: ${hp}/${maxHp}`, 25, 35)
+    ctx.fillText(`HP: ${hp}/${maxHp}`,25,35)
 
     // Level + XP rechtsboven
     let xpBarWidth = 150
@@ -86,7 +82,7 @@ class Combat {
     ctx.strokeStyle="white"
     ctx.strokeRect(xPos,20,xpBarWidth,20)
     ctx.fillStyle="white"
-    ctx.fillText(`LV ${this.level}`, xPos, 15)
+    ctx.fillText(`LV ${this.level}`, xPos,15)
   }
 }
 
