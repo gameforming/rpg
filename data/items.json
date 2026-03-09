@@ -1,13 +1,12 @@
 {
  "stick":{
-  "name":"stick",
+  "name":"Stick",
   "type":"weapon",
   "rarity":"common",
   "damage":2,
   "texture":"stick.png",
   "range":{"width":3,"length":9}
  },
-
  "stone_sword":{
   "name":"Stone Sword",
   "type":"weapon",
@@ -15,9 +14,7 @@
   "damage":4,
   "texture":"stone_sword.png",
   "range":{"width":3,"length":9}
-  
  },
-
  "iron_sword":{
   "name":"Iron Sword",
   "type":"weapon",
@@ -25,9 +22,7 @@
   "damage":6,
   "texture":"iron_sword.png",
   "range":{"width":3,"length":9}
-  
  },
-
  "gold_sword":{
   "name":"Gold Sword",
   "type":"weapon",
@@ -35,9 +30,7 @@
   "damage":8,
   "texture":"gold_sword.png",
   "range":{"width":3,"length":9}
-  
  },
-
  "diamond_sword":{
   "name":"Diamond Sword",
   "type":"weapon",
@@ -45,6 +38,5 @@
   "damage":11,
   "texture":"diamond_sword.png",
   "range":{"width":3,"length":9}
-  
  }
 }
