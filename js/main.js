@@ -20,6 +20,8 @@ const SLOT_SIZE=48
 const COLS=9
 const ROWS=3
 
+let openedChests = new Set()
+
 let draggedItem=null
 let mouse={x:0,y:0}
 let mouseDown = false
@@ -145,33 +147,32 @@ function generateLoot(luck=1){
  return {id:id,name:items[id].name,type:items[id].type,damage:items[id].damage,rarity:items[id].rarity,image:itemTextures[id]}
 }
 
-canvas.addEventListener("mousedown",e=>{
- mouse.x=e.clientX
- mouse.y=e.clientY
- let s=getSlot(mouse.x,mouse.y)
- if(s){
-  if(s.t==="h"&&hotbar[s.i]){draggedItem=hotbar[s.i];hotbar[s.i]=null}
-  if(s.t==="i"&&inventory[s.i]){draggedItem=inventory[s.i];inventory[s.i]=null}
-  return
- }
+canvas.addEventListener("mousedown", e => {
+  mouse.x = e.clientX
+  mouse.y = e.clientY
 
- let wx=mouse.x+camera.x
- let wy=mouse.y+camera.y
- let tx=Math.floor(wx/world.tileSize)
- let ty=Math.floor(wy/world.tileSize)
- let tile=world.getTile(tx,ty)
+  let s = getSlot(mouse.x, mouse.y)
+  if(s){
+    if(s.t==="h" && hotbar[s.i]) { draggedItem = hotbar[s.i]; hotbar[s.i]=null }
+    if(s.t==="i" && inventory[s.i]) { draggedItem = inventory[s.i]; inventory[s.i]=null }
+    return
+  }
 
- if(tile&&tile.block==="chest"){
- let key=tx+"_"+ty
+  let wx = mouse.x + camera.x
+  let wy = mouse.y + camera.y
+  let tx = Math.floor(wx / world.tileSize)
+  let ty = Math.floor(wy / world.tileSize)
+  let tile = world.getTile(tx, ty)
 
- if(!openedChests[key]){
-  let loot=generateLoot(tile.luck||1)
-  addItemToInventory(loot)
-  openedChests[key]=true
- }
-}
+  if(tile && tile.block === "chest"){
+    let chestKey = `${tx},${ty}`
+    if(openedChests.has(chestKey)) return  // als al geopend, niets doen
+    openedChests.add(chestKey)              // markeer chest als geopend
+
+    let loot = generateLoot(tile.luck || 1)
+    addItemToInventory(loot)
+  }
 })
-
 canvas.addEventListener("mouseup",e=>{
  mouse.x=e.clientX
  mouse.y=e.clientY
