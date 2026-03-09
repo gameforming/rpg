@@ -237,23 +237,28 @@ window.addEventListener("resize",()=>{
 })
 
 async function init(){
- await loadBlocks()
- await loadTextures()
- await loadItems()
- window.structures=new StructureManager(blocks)
- await window.structures.loadAll()
- player=new Player()
- world=new World(blocks,textures)
+  await loadBlocks()
+  await loadTextures()
+  await loadItems()
 
- combat = new Combat(player)
+  window.structures = new StructureManager(blocks)
+  await window.structures.loadAll()
 
- let img=new Image()
- img.src="assets/stick.png"
- await new Promise(r=>img.onload=r)
- img = await makeTransparent(img)
- hotbar[0]={name:"Stick",type:"basic",image:img}
+  player = new Player()
+  world = new World(blocks, textures)
 
- loop()
+  // Combat systeem initialiseren
+  combat = new Combat(player)
+
+  // Start weapon toevoegen en transparant maken
+  let img = new Image()
+  img.src = "assets/stick.png"
+  await new Promise(r => img.onload = r)
+  img = await makeTransparent(img)
+  hotbar[0] = {name:"Stick", type:"basic", image:img}
+
+  // Eventueel meer startitems toevoegen hier
+
+  loop()
 }
-
 init()
