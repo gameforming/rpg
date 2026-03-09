@@ -22,6 +22,9 @@ const ROWS=3
 
 let draggedItem=null
 let mouse={x:0,y:0}
+let mouseDown = false
+canvas.addEventListener("mousedown",()=>{mouseDown=true})
+canvas.addEventListener("mouseup",()=>{mouseDown=false})
 
 async function loadBlocks(){
  let r=await fetch("data/blocks.json")
@@ -208,6 +211,10 @@ function update(){
  player.update()
  camera.x=player.x-canvas.width/2
  camera.y=player.y-canvas.height/2
+ let now = performance.now()
+ if(hotbar[selectedHotbar] && mouseDown){
+  combat.attack(enemies, hotbar[selectedHotbar], mouse.x, mouse.y, camera, now)
+}
 }
 
 function draw(){
@@ -218,6 +225,7 @@ function draw(){
  drawHotbar()
  if(draggedItem&&draggedItem.image){
   ctx.drawImage(draggedItem.image,mouse.x-SLOT_SIZE/2,mouse.y-SLOT_SIZE/2,SLOT_SIZE,SLOT_SIZE)
+ combat.drawUI(ctx, canvas)
  }
 }
 
@@ -236,6 +244,8 @@ async function init(){
  await window.structures.loadAll()
  player=new Player()
  world=new World(blocks,textures)
+
+ combat = new Combat(player)
 
  let img=new Image()
  img.src="assets/stick.png"
