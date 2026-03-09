@@ -3,6 +3,7 @@ const ctx=canvas.getContext("2d")
 canvas.width=window.innerWidth
 canvas.height=window.innerHeight
 
+let combat = null
 let items={}
 let itemTextures={}
 let blocks={}
@@ -171,21 +172,9 @@ canvas.addEventListener("mousedown", e => {
   let ty = Math.floor(wy/world.tileSize)
   let tile = world.getTile(tx, ty)
   if(tile && tile.block === "chest"){
-    let loot = generateLoot(tile.luck || 1)
-    addItemToInventory(loot)
-  }
-})
-
-  let wx = mouse.x + camera.x
-  let wy = mouse.y + camera.y
-  let tx = Math.floor(wx / world.tileSize)
-  let ty = Math.floor(wy / world.tileSize)
-  let tile = world.getTile(tx, ty)
-
-  if(tile && tile.block === "chest"){
     let chestKey = `${tx},${ty}`
-    if(openedChests.has(chestKey)) return  // als al geopend, niets doen
-    openedChests.add(chestKey)              // markeer chest als geopend
+    if(openedChests.has(chestKey)) return
+    openedChests.add(chestKey)
 
     let loot = generateLoot(tile.luck || 1)
     addItemToInventory(loot)
