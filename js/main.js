@@ -267,7 +267,7 @@ async function init(){
   window.structures = new StructureManager(blocks)
   await window.structures.loadAll()
   player = new Player()
-  world = new World(blocks, textures)
+  let world = new World(blocks, textures)
   
 
   // Combat instantie aanmaken
