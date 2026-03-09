@@ -1,6 +1,6 @@
 // combat.js
 
-class Combat {
+export class Combat {
   constructor(player, world){
     this.player = player        // speler object
     this.world = world          // world object, nodig voor tileSize
