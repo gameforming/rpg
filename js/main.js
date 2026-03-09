@@ -14,7 +14,7 @@ let itemTextures={}
 let blocks={}
 let textures={}
 let player
-let world
+
 let camera={x:0,y:0}
 
 let inventory=Array(27).fill(null)
