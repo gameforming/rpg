@@ -4,7 +4,8 @@
   "type":"weapon",
   "rarity":"common",
   "damage":2,
-  "texture":"stick.png"
+  "texture":"stick.png",
+  "range",6,20
  },
 
  "stone_sword":{
@@ -12,7 +13,9 @@
   "type":"weapon",
   "rarity":"common",
   "damage":4,
-  "texture":"stone_sword.png"
+  "texture":"stone_sword.png",
+  "range",6,20
+  
  },
 
  "iron_sword":{
@@ -20,7 +23,9 @@
   "type":"weapon",
   "rarity":"uncommon",
   "damage":6,
-  "texture":"iron_sword.png"
+  "texture":"iron_sword.png",
+  "range",6,20
+  
  },
 
  "gold_sword":{
@@ -28,7 +33,9 @@
   "type":"weapon",
   "rarity":"rare",
   "damage":8,
-  "texture":"gold_sword.png"
+  "texture":"gold_sword.png",
+  "range",6,20
+  
  },
 
  "diamond_sword":{
@@ -36,6 +43,8 @@
   "type":"weapon",
   "rarity":"epic",
   "damage":11,
-  "texture":"diamond_sword.png"
+  "texture":"diamond_sword.png",
+  "range",6,20
+  
  }
 }
