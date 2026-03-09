@@ -127,7 +127,6 @@ function getRandomRarity(){
 }
 
 function generateLoot(luck=1){
- // Pas rarity kansen aan op basis van luck
  let chances={}
  for(let k in baseRarityChances)chances[k]=baseRarityChances[k]*(1+luck/100)
  let total=0
@@ -160,8 +159,11 @@ canvas.addEventListener("mousedown",e=>{
  let tile=world.getTile(tx,ty)
 
  if(tile&&tile.block==="chest"){
-  let loot=generateLoot(tile.luck||1)
-  addItemToInventory(loot)
+  if(!tile.opened){
+   let loot=generateLoot(tile.luck||1)
+   addItemToInventory(loot)
+   tile.opened=true
+  }
  }
 })
 
@@ -181,12 +183,24 @@ canvas.addEventListener("mouseup",e=>{
 })
 
 canvas.addEventListener("mousemove",e=>{mouse.x=e.clientX; mouse.y=e.clientY})
+
 window.addEventListener("wheel",e=>{
  if(inventoryOpen)return
  if(e.deltaY<0)selectedHotbar=(selectedHotbar+1)%hotbar.length
  if(e.deltaY>0)selectedHotbar=(selectedHotbar-1+hotbar.length)%hotbar.length
 })
-window.addEventListener("keydown",e=>{if(e.key.toLowerCase()==="e")inventoryOpen=!inventoryOpen})
+
+window.addEventListener("keydown",e=>{
+ if(e.key.toLowerCase()==="e")inventoryOpen=!inventoryOpen
+
+ if(e.key==="ArrowRight"){
+  selectedHotbar=(selectedHotbar+1)%hotbar.length
+ }
+
+ if(e.key==="ArrowLeft"){
+  selectedHotbar=(selectedHotbar-1+hotbar.length)%hotbar.length
+ }
+})
 
 function update(){
  player.update()
@@ -224,7 +238,7 @@ async function init(){
  let img=new Image()
  img.src="assets/stick.png"
  await new Promise(r=>img.onload=r)
- img = await makeTransparent(img) // <<< transparantie toepassen
+ img = await makeTransparent(img)
  hotbar[0]={name:"Stick",type:"basic",image:img}
 
  loop()
