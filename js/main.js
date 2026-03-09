@@ -3,6 +3,9 @@ const ctx=canvas.getContext("2d")
 canvas.width=window.innerWidth
 canvas.height=window.innerHeight
 
+// main.js
+combat = new Combat(player, world)
+
 let combat = null
 let items={}
 let itemTextures={}
