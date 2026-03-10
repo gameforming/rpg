@@ -1,6 +1,7 @@
 export class World {
   constructor(blocks, textures) {
     console.log("WORLD: constructor gestart")
+    this.canvas = canvas
 
     this.tileSize = 32
     this.blocks = blocks
@@ -170,8 +171,8 @@ export class World {
   draw(ctx, camera) {
     let startX = Math.floor(camera.x / this.tileSize) - 2
     let startY = Math.floor(camera.y / this.tileSize) - 2
-    let endX = startX + Math.ceil(canvas.width / this.tileSize) + 4
-    let endY = startY + Math.ceil(canvas.height / this.tileSize) + 4
+    let endX = startX + Math.ceil(this.canvas.width / this.tileSize) + 4
+    let endY = startY + Math.ceil(this.canvas.height / this.tileSize) + 4
 
     for (let y = startY; y < endY; y++) {
       for (let x = startX; x < endX; x++) {
