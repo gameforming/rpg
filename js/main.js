@@ -7,7 +7,9 @@ import { Combat } from "./combat.js"
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-const world = new World(canvas); // ÉÉN instance
+
+let world
+world = new World(blocks, textures, canvas)
 
 canvas.width=window.innerWidth
 canvas.height=window.innerHeight
