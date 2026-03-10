@@ -1,5 +1,5 @@
 export class World {
-  constructor(blocks, textures) {
+  constructor(blocks, textures, canvas) {
     console.log("WORLD: constructor gestart")
     this.canvas = canvas
 
