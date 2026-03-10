@@ -9,7 +9,7 @@ const ctx = canvas.getContext("2d");
 
 
 let world
-world = new World(blocks, textures, canvas)
+
 
 canvas.width=window.innerWidth
 canvas.height=window.innerHeight
@@ -270,7 +270,7 @@ async function init(){
   window.structures = new StructureManager(blocks)
   await window.structures.loadAll()
   player = new Player()
-  world = new World(blocks, textures)
+  world = new World(blocks, textures, canvas)
   
 
   // Combat instantie aanmaken
