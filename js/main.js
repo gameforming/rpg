@@ -229,48 +229,40 @@ window.addEventListener("keydown",e=>{
 })
 
 function update(){
- 
- camera.x=player.x-canvas.width/2
- camera.y=player.y-canvas.height/2
- let now = performance.now()
- if(hotbar[selectedHotbar] && mouseDown){
-  combat.attack(enemies, hotbar[selectedHotbar], mouse.x, mouse.y, camera, now)
-  // BEWEGING
- player.update(
- world,
- mouseX,
- mouseY,
- camera
-)
-}
+  player.update(world, mouseX, mouseY, camera) // altijd bijwerken
+
+  camera.x = player.x - canvas.width / 2
+  camera.y = player.y - canvas.height / 2
+
+  if(hotbar[selectedHotbar] && mouseDown){
+    const now = performance.now()
+    combat.attack(enemies, hotbar[selectedHotbar], mouse.x, mouse.y, camera, now)
+  }
 }
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height)
+
   world.draw(ctx,camera)
   player.draw(ctx, camera)
 
-  const selectedItem = hotbar[selectedHotbar];
-  player.drawWeapon(
-  ctx,
-  camera,
-  selectedItem,
-  itemTextures
-  )
+  // Zet selectedItem voor het gebruiken
+  const selectedItem = hotbar[selectedHotbar]
 
-  
+  // Weapon tekenen
+  player.drawWeapon(ctx, camera, selectedItem, itemTextures)
 
-  player.drawWeapon(ctx, camera, selectedItem);
   drawInventory()
   drawHotbar()
+
   if(draggedItem && draggedItem.image){
     ctx.drawImage(draggedItem.image, mouse.x-SLOT_SIZE/2, mouse.y-SLOT_SIZE/2, SLOT_SIZE, SLOT_SIZE)
   }
+
   if(combat){
     combat.drawUI(ctx, canvas)
   }
 }
-
 function loop(){update(); draw(); requestAnimationFrame(loop)}
 
 window.addEventListener("resize",()=>{
