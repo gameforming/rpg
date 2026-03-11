@@ -75,7 +75,7 @@ this.y = newY
 }
 
 
-}
+
 
 draw(ctx, camera){
 
