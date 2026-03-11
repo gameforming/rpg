@@ -25,7 +25,13 @@ this.keys[e.key.toLowerCase()] = false
 }
 
 
-update(world, mouseX, mouseY, camera){
+// Player.js
+update(world, mouse, camera){
+  const dx = mouse.x + camera.x - this.x
+  const dy = mouse.y + camera.y - this.y
+  this.weaponAngle = Math.atan2(dy, dx)
+  
+
 
 let newX = this.x
 let newY = this.y
@@ -42,6 +48,8 @@ const dx = mouse.x + camera.x - this.x
 const dy = mouse.y + camera.y - this.y
 
 this.weaponAngle = Math.atan2(dy, dx)
+
+
 
 
 // swing animatie
@@ -71,7 +79,7 @@ this.y = newY
 }
 
 }
-
+}
 
 draw(ctx, camera){
 
