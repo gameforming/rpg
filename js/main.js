@@ -229,19 +229,33 @@ window.addEventListener("keydown",e=>{
 })
 
 function update(){
- player.update()
+ 
  camera.x=player.x-canvas.width/2
  camera.y=player.y-canvas.height/2
  let now = performance.now()
  if(hotbar[selectedHotbar] && mouseDown){
   combat.attack(enemies, hotbar[selectedHotbar], mouse.x, mouse.y, camera, now)
+  // BEWEGING
+ player.update(
+ world,
+ mouseX,
+ mouseY,
+ camera
+)
 }
 }
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height)
   world.draw(ctx,camera)
-  player.draw(ctx, camera);
+  player.draw(ctx, camera)
+
+  player.drawWeapon(
+  ctx,
+  camera,
+  selectedItem,
+  itemTextures
+  )
 
   const selectedItem = hotbar[selectedHotbar];
 
