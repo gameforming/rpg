@@ -14,6 +14,9 @@ let world
 let player
 let combat = null
 
+let enemies = []
+
+
 let items = {}
 let itemTextures = {}
 let blocks = {}
