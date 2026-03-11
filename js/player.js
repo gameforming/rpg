@@ -89,7 +89,7 @@ this.size
 )
 
 
-
+}
 
 drawWeapon(ctx, camera, selectedItem, itemTextures){
 
