@@ -250,6 +250,7 @@ function draw(){
   world.draw(ctx,camera)
   player.draw(ctx, camera)
 
+  const selectedItem = hotbar[selectedHotbar];
   player.drawWeapon(
   ctx,
   camera,
@@ -257,7 +258,7 @@ function draw(){
   itemTextures
   )
 
-  const selectedItem = hotbar[selectedHotbar];
+  
 
   player.drawWeapon(ctx, camera, selectedItem);
   drawInventory()
