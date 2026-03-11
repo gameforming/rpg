@@ -24,26 +24,24 @@ this.keys[e.key.toLowerCase()] = false
 
 }
 
-update(){
+
+update(world, mouseX, mouseY, camera){
 
 let newX = this.x
 let newY = this.y
 
+// beweging
 if(this.keys["w"]) newY -= this.speed
 if(this.keys["s"]) newY += this.speed
 if(this.keys["a"]) newX -= this.speed
 if(this.keys["d"]) newX += this.speed
 
 
-// weapon richting naar muis
-if(typeof mouseX !== "undefined" && typeof camera !== "undefined"){
-
+// weapon richting
 const dx = mouseX + camera.x - this.x
 const dy = mouseY + camera.y - this.y
 
 this.weaponAngle = Math.atan2(dy, dx)
-
-}
 
 
 // swing animatie
@@ -61,9 +59,7 @@ this.weaponSwing = 0
 }
 
 
-// collision check
-if(typeof world !== "undefined"){
-
+// collision
 let tileX = Math.floor((newX + this.size/2) / 32)
 let tileY = Math.floor((newY + this.size/2) / 32)
 
@@ -71,8 +67,6 @@ if(world.isWalkable(tileX, tileY)){
 
 this.x = newX
 this.y = newY
-
-}
 
 }
 
@@ -93,31 +87,24 @@ this.size
 }
 
 
-drawWeapon(ctx, camera, selectedItem){
+drawWeapon(ctx, camera, selectedItem, itemTextures){
 
 if(!selectedItem) return
 if(selectedItem.type !== "weapon") return
-if(typeof itemTextures === "undefined") return
 
 const texture = itemTextures[selectedItem.id]
 if(!texture) return
 
-
 let angle = this.weaponAngle
 
-
-// swing effect
 if(this.weaponSwinging){
 angle += Math.sin(this.weaponSwing) * 0.8
 }
 
-
-// positie naast speler
 const offset = 20
 
 const wx = this.x + Math.cos(this.weaponAngle) * offset
 const wy = this.y + Math.sin(this.weaponAngle) * offset
-
 
 ctx.save()
 
@@ -128,17 +115,9 @@ wy - camera.y
 
 ctx.rotate(angle)
 
-
-// transparant wanneer idle
 ctx.globalAlpha = this.weaponSwinging ? 1 : 0.6
 
-ctx.drawImage(
-texture,
--16,
--16,
-32,
-32
-)
+ctx.drawImage(texture,-16,-16,32,32)
 
 ctx.restore()
 
