@@ -230,7 +230,7 @@ window.addEventListener("keydown",e=>{
 
 function update(){
   // altijd updaten
-  player.update(world, mouse.x, mouse.y, camera)
+  player.update(world, mouse, camera)
 
   camera.x = player.x - canvas.width / 2
   camera.y = player.y - canvas.height / 2
