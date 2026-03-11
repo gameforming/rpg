@@ -38,8 +38,8 @@ if(this.keys["d"]) newX += this.speed
 
 
 // weapon richting
-const dx = mouseX + camera.x - this.x
-const dy = mouseY + camera.y - this.y
+const dx = mouse.x + camera.x - this.x
+const dy = mouse.y + camera.y - this.y
 
 this.weaponAngle = Math.atan2(dy, dx)
 
