@@ -1,556 +1,348 @@
-import { Player } from "./player.js"
-import { makeTransparent } from "./textureUtils.js"
-import { World } from "./world.js"
-import { StructureManager } from "./structures.js"
-import { Combat } from "./combat.js"
+import { Player } from "./player.js";
+import { makeTransparent } from "./textureUtils.js";
+import { World } from "./world.js";
+import { StructureManager } from "./structures.js";
+import { Combat } from "./combat.js";
 
-const canvas = document.getElementById("game")
-const ctx = canvas.getContext("2d")
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-canvas.width = window.innerWidth
-canvas.height = window.innerHeight
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-let world
-let player
-let combat = null
+// --- GAME STATE ---
+let world;
+let player;
+let combat = null;
+let enemies = []; // fix ReferenceError
 
-let enemies = []
+let items = {};
+let itemTextures = {};
+let blocks = {};
+let textures = {};
 
+let camera = { x: 0, y: 0 };
 
-let items = {}
-let itemTextures = {}
-let blocks = {}
-let textures = {}
+let inventory = Array(27).fill(null);
+let hotbar = Array(9).fill(null);
+let selectedHotbar = 0;
+let inventoryOpen = false;
 
-let camera = {x:0,y:0}
+const SLOT_SIZE = 48;
+const COLS = 9;
+const ROWS = 3;
 
-let inventory = Array(27).fill(null)
-let hotbar = Array(9).fill(null)
-let selectedHotbar = 0
-let inventoryOpen = false
+let openedChests = new Set();
 
-const SLOT_SIZE = 48
-const COLS = 9
-const ROWS = 3
+let draggedItem = null;
+let mouse = { x: 0, y: 0 };
+let mouseDown = false;
 
-let openedChests = new Set()
+canvas.addEventListener("mousedown", () => { mouseDown = true; });
+canvas.addEventListener("mouseup", () => { mouseDown = false; });
 
-let draggedItem = null
-let mouse = {x:0,y:0}
-let mouseDown = false
-
-canvas.addEventListener("mousedown",()=>{mouseDown=true})
-canvas.addEventListener("mouseup",()=>{mouseDown=false})
-
-async function loadBlocks(){
- let r = await fetch("data/blocks.json")
- blocks = await r.json()
+// --- ASSETS LOADING ---
+async function loadBlocks() {
+  console.log("[LOAD] Blocks");
+  const r = await fetch("data/blocks.json");
+  blocks = await r.json();
+  console.log("[LOAD] Blocks loaded:", Object.keys(blocks));
 }
 
-async function loadItems(){
- let r = await fetch("data/items.json")
- items = await r.json()
+async function loadItems() {
+  console.log("[LOAD] Items");
+  const r = await fetch("data/items.json");
+  items = await r.json();
+  console.log("[LOAD] Items loaded:", Object.keys(items));
 
- for(let id in items){
-
-  let img = new Image()
-  img.src = "assets/" + items[id].texture
-
-  await new Promise(res => img.onload = res)
-
-  itemTextures[id] = await makeTransparent(img)
-
- }
-}
-
-async function loadTextures(){
-
- for(let k in blocks){
-
-  let t = blocks[k].texture
-
-  if(textures[t]) continue
-
-  let img = new Image()
-  img.src = "assets/" + t
-
-  await new Promise(r => img.onload = r)
-
-  textures[t] = img
-
- }
-
-}
-
-function hotbarX(){
-
- let total = hotbar.length * SLOT_SIZE + (hotbar.length-1)*5
- return (canvas.width-total)/2
-
-}
-
-function hotbarY(){
- return canvas.height - SLOT_SIZE - 10
-}
-
-function invStart(){
-
- let w = COLS * SLOT_SIZE + (COLS-1)*5
-
- return {
-  x:(canvas.width-w)/2,
-  y:hotbarY() - ROWS*(SLOT_SIZE+5) - 30
- }
-
-}
-
-function drawHotbar(){
-
- let y = hotbarY()
- let sx = hotbarX()
-
- for(let i=0;i<hotbar.length;i++){
-
-  let x = sx + i*(SLOT_SIZE+5)
-
-  ctx.fillStyle = i===selectedHotbar ? "yellow" : "rgba(0,0,0,0.6)"
-  ctx.fillRect(x,y,SLOT_SIZE,SLOT_SIZE)
-
-  let item = hotbar[i]
-
-  if(item && item.image instanceof HTMLImageElement){
-
-   ctx.drawImage(item.image,x+4,y+4,SLOT_SIZE-8,SLOT_SIZE-8)
-
+  for (let id in items) {
+    const img = new Image();
+    img.src = "assets/" + items[id].texture;
+    await new Promise(res => img.onload = res);
+    itemTextures[id] = await makeTransparent(img);
+    console.log(`[LOAD] Item texture loaded: ${id}`, itemTextures[id]);
   }
-
- }
-
 }
 
-function drawInventory(){
-
- if(!inventoryOpen) return
-
- let s = invStart()
-
- for(let r=0;r<ROWS;r++){
-
-  for(let c=0;c<COLS;c++){
-
-   let i = r*COLS+c
-
-   let x = s.x + c*(SLOT_SIZE+5)
-   let y = s.y + r*(SLOT_SIZE+5)
-
-   ctx.fillStyle = "rgba(0,0,0,0.7)"
-   ctx.fillRect(x,y,SLOT_SIZE,SLOT_SIZE)
-
-   let item = inventory[i]
-
-   if(item && item.image instanceof HTMLImageElement){
-
-    ctx.drawImage(item.image,x+4,y+4,SLOT_SIZE-8,SLOT_SIZE-8)
-
-   }
-
+async function loadTextures() {
+  console.log("[LOAD] Block Textures");
+  for (let k in blocks) {
+    const t = blocks[k].texture;
+    if (textures[t]) continue;
+    const img = new Image();
+    img.src = "assets/" + t;
+    await new Promise(res => img.onload = res);
+    textures[t] = img;
+    console.log("[LOAD] Block texture loaded:", t);
   }
-
- }
-
 }
 
-function getSlot(mx,my){
+// --- INVENTORY & HOTBAR POSITIONS ---
+function hotbarX() {
+  const total = hotbar.length * SLOT_SIZE + (hotbar.length - 1) * 5;
+  return (canvas.width - total) / 2;
+}
 
- let sx = hotbarX()
- let y = hotbarY()
+function hotbarY() {
+  return canvas.height - SLOT_SIZE - 10;
+}
 
- for(let i=0;i<hotbar.length;i++){
+function invStart() {
+  const w = COLS * SLOT_SIZE + (COLS - 1) * 5;
+  return { x: (canvas.width - w) / 2, y: hotbarY() - ROWS * (SLOT_SIZE + 5) - 30 };
+}
 
-  let x = sx + i*(SLOT_SIZE+5)
+// --- DRAW FUNCTIONS ---
+function drawHotbar() {
+  const y = hotbarY();
+  const sx = hotbarX();
+  for (let i = 0; i < hotbar.length; i++) {
+    const x = sx + i * (SLOT_SIZE + 5);
+    ctx.fillStyle = i === selectedHotbar ? "yellow" : "rgba(0,0,0,0.6)";
+    ctx.fillRect(x, y, SLOT_SIZE, SLOT_SIZE);
 
-  if(mx>=x && mx<=x+SLOT_SIZE && my>=y && my<=y+SLOT_SIZE){
-
-   return {t:"h",i}
-
-  }
-
- }
-
- if(inventoryOpen){
-
-  let s = invStart()
-
-  for(let r=0;r<ROWS;r++){
-
-   for(let c=0;c<COLS;c++){
-
-    let i = r*COLS+c
-
-    let x = s.x + c*(SLOT_SIZE+5)
-    let y = s.y + r*(SLOT_SIZE+5)
-
-    if(mx>=x && mx<=x+SLOT_SIZE && my>=y && my<=y+SLOT_SIZE){
-
-     return {t:"i",i}
-
+    const item = hotbar[i];
+    if (item && item.image instanceof HTMLImageElement) {
+      ctx.drawImage(item.image, x + 4, y + 4, SLOT_SIZE - 8, SLOT_SIZE - 8);
     }
-
-   }
-
   }
-
- }
-
- return null
-
 }
 
-function addItemToInventory(item){
+function drawInventory() {
+  if (!inventoryOpen) return;
 
- for(let i=0;i<inventory.length;i++){
+  console.log("[DRAW] Inventory open");
+  const s = invStart();
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const i = r * COLS + c;
+      const x = s.x + c * (SLOT_SIZE + 5);
+      const y = s.y + r * (SLOT_SIZE + 5);
 
-  if(!inventory[i]){
+      ctx.fillStyle = "rgba(0,0,0,0.7)";
+      ctx.fillRect(x, y, SLOT_SIZE, SLOT_SIZE);
 
-   inventory[i] = item
-   return
-
+      const item = inventory[i];
+      if (item && item.image instanceof HTMLImageElement) {
+        ctx.drawImage(item.image, x + 4, y + 4, SLOT_SIZE - 8, SLOT_SIZE - 8);
+        console.log(`[DRAW] Inventory slot ${i}:`, item.name);
+      }
+    }
   }
-
- }
-
 }
 
-const baseRarityChances = {
- common:60,
- uncommon:25,
- rare:10,
- epic:4,
- legendary:1
+// --- SLOT DETECTION ---
+function getSlot(mx, my) {
+  const sx = hotbarX();
+  const y = hotbarY();
+  for (let i = 0; i < hotbar.length; i++) {
+    const x = sx + i * (SLOT_SIZE + 5);
+    if (mx >= x && mx <= x + SLOT_SIZE && my >= y && my <= y + SLOT_SIZE) {
+      console.log(`[SLOT] Hotbar ${i} clicked`);
+      return { t: "h", i };
+    }
+  }
+
+  if (inventoryOpen) {
+    const s = invStart();
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const i = r * COLS + c;
+        const x = s.x + c * (SLOT_SIZE + 5);
+        const y = s.y + r * (SLOT_SIZE + 5);
+        if (mx >= x && mx <= x + SLOT_SIZE && my >= y && my <= y + SLOT_SIZE) {
+          console.log(`[SLOT] Inventory ${i} clicked`);
+          return { t: "i", i };
+        }
+      }
+    }
+  }
+
+  return null;
 }
 
-function generateLoot(luck=1){
-
- let chances = {}
-
- for(let k in baseRarityChances){
-
-  chances[k] = baseRarityChances[k]*(1+luck/100)
-
- }
-
- let total = 0
-
- for(let k in chances){
-
-  total += chances[k]
-
- }
-
- let r = Math.random()*total
- let sum = 0
- let selected = "common"
-
- for(let k in chances){
-
-  sum += chances[k]
-
-  if(r<=sum){
-
-   selected = k
-   break
-
+// --- INVENTORY FUNCTIONS ---
+function addItemToInventory(item) {
+  for (let i = 0; i < inventory.length; i++) {
+    if (!inventory[i]) {
+      inventory[i] = item;
+      console.log("[INVENTORY] Item added to slot", i, item.name);
+      return;
+    }
   }
-
- }
-
- let pool = []
-
- for(let id in items){
-
-  if(items[id].rarity === selected){
-
-   pool.push(id)
-
-  }
-
- }
-
- if(pool.length===0){
-
-  pool = Object.keys(items)
-
- }
-
- let id = pool[Math.floor(Math.random()*pool.length)]
-
- return {
-
-  id:id,
-  name:items[id].name,
-  type:items[id].type,
-  damage:items[id].damage,
-  rarity:items[id].rarity,
-  image:itemTextures[id] || null
-
- }
-
+  console.log("[INVENTORY] No empty slot for", item.name);
 }
 
-canvas.addEventListener("mousedown", e=>{
+const baseRarityChances = { common: 60, uncommon: 25, rare: 10, epic: 4, legendary: 1 };
 
- mouse.x = e.clientX
- mouse.y = e.clientY
+function generateLoot(luck = 1) {
+  let chances = {};
+  for (let k in baseRarityChances) chances[k] = baseRarityChances[k] * (1 + luck / 100);
 
- let s = getSlot(mouse.x,mouse.y)
+  let total = Object.values(chances).reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  let sum = 0;
+  let selected = "common";
 
- if(s){
-
-  if(s.t==="h" && hotbar[s.i]){
-
-   draggedItem = hotbar[s.i]
-   hotbar[s.i] = null
-
+  for (let k in chances) {
+    sum += chances[k];
+    if (r <= sum) { selected = k; break; }
   }
 
-  if(s.t==="i" && inventory[s.i]){
-
-   draggedItem = inventory[s.i]
-   inventory[s.i] = null
-
-  }
-
-  return
-
- }
-
- let weapon = hotbar[selectedHotbar]
-
- if(weapon && weapon.damage){
-
-  combat.attack(enemies,weapon,mouse.x,mouse.y,camera,Date.now())
-
- }
-
- let wx = mouse.x + camera.x
- let wy = mouse.y + camera.y
-
- let tx = Math.floor(wx/world.tileSize)
- let ty = Math.floor(wy/world.tileSize)
-
- let tile = world.getTile(tx,ty)
-
- if(tile && tile.block==="chest"){
-
-  let chestKey = `${tx},${ty}`
-
-  if(openedChests.has(chestKey)) return
-
-  openedChests.add(chestKey)
-
-  let loot = generateLoot(tile.luck || 1)
-
-  addItemToInventory(loot)
-
- }
-
-})
-
-canvas.addEventListener("mouseup",e=>{
-
- mouse.x = e.clientX
- mouse.y = e.clientY
-
- if(!draggedItem) return
-
- let s = getSlot(mouse.x,mouse.y)
-
- if(s){
-
-  if(s.t==="h" && !hotbar[s.i]){
-
-   hotbar[s.i] = draggedItem
-   draggedItem = null
-   return
-
-  }
-
-  if(s.t==="i" && !inventory[s.i]){
-
-   inventory[s.i] = draggedItem
-   draggedItem = null
-   return
-
-  }
-
- }
-
- for(let i=0;i<inventory.length;i++){
-
-  if(!inventory[i]){
-
-   inventory[i] = draggedItem
-   draggedItem = null
-   return
-
-  }
-
- }
-
- draggedItem = null
-
-})
-
-canvas.addEventListener("mousemove",e=>{
- mouse.x = e.clientX
- mouse.y = e.clientY
-})
-
-window.addEventListener("wheel",e=>{
-
- if(inventoryOpen) return
-
- if(e.deltaY<0){
-
-  selectedHotbar=(selectedHotbar+1)%hotbar.length
-
- }
-
- if(e.deltaY>0){
-
-  selectedHotbar=(selectedHotbar-1+hotbar.length)%hotbar.length
-
- }
-
-})
-
-window.addEventListener("keydown",e=>{
-
- const key = e.key.toLowerCase()
-
- if(key==="e"){
-
-  inventoryOpen = !inventoryOpen
-
- }
-
- if(key==="arrowright"){
-
-  selectedHotbar=(selectedHotbar+1)%hotbar.length
-
- }
-
- if(key==="arrowleft"){
-
-  selectedHotbar=(selectedHotbar-1+hotbar.length)%hotbar.length
-
- }
-
-})
-
-function update(){
-
- player.update(world,mouse,camera)
-
- camera.x = player.x - canvas.width/2
- camera.y = player.y - canvas.height/2
-
- if(hotbar[selectedHotbar] && mouseDown){
-
-  const now = performance.now()
-
-  combat.attack(enemies,hotbar[selectedHotbar],mouse.x,mouse.y,camera,now)
-
- }
-
+  let pool = [];
+  for (let id in items) if (items[id].rarity === selected) pool.push(id);
+  if (pool.length === 0) pool = Object.keys(items);
+
+  let id = pool[Math.floor(Math.random() * pool.length)];
+
+  const loot = {
+    id: id,
+    name: items[id].name,
+    type: items[id].type,
+    damage: items[id].damage,
+    rarity: items[id].rarity,
+    image: itemTextures[id] || null
+  };
+
+  console.log("[LOOT] Generated loot:", loot.name, "rarity:", loot.rarity);
+  return loot;
 }
 
-function draw(){
+// --- MOUSE EVENTS ---
+canvas.addEventListener("mousedown", e => {
+  mouse.x = e.clientX; mouse.y = e.clientY;
+  const s = getSlot(mouse.x, mouse.y);
 
- ctx.clearRect(0,0,canvas.width,canvas.height)
+  if (s) {
+    if (s.t === "h" && hotbar[s.i]) { draggedItem = hotbar[s.i]; hotbar[s.i] = null; console.log("[DRAG] Hotbar slot", s.i); }
+    if (s.t === "i" && inventory[s.i]) { draggedItem = inventory[s.i]; inventory[s.i] = null; console.log("[DRAG] Inventory slot", s.i); }
+    return;
+  }
 
- world.draw(ctx,camera)
+  const weapon = hotbar[selectedHotbar];
+  if (weapon && weapon.damage && combat) {
+    combat.attack(enemies, weapon, mouse.x, mouse.y, camera, Date.now());
+    console.log("[COMBAT] Attack with", weapon.name);
+  }
 
- player.draw(ctx,camera)
+  // Chest interaction
+  const wx = mouse.x + camera.x;
+  const wy = mouse.y + camera.y;
+  const tx = Math.floor(wx / world.tileSize);
+  const ty = Math.floor(wy / world.tileSize);
+  const tile = world.getTile(tx, ty);
 
- const selectedItem = hotbar[selectedHotbar]
+  if (tile && tile.block === "chest") {
+    const chestKey = `${tx},${ty}`;
+    if (openedChests.has(chestKey)) return;
+    openedChests.add(chestKey);
+    console.log("[CHEST] Opening chest at", tx, ty);
 
- player.drawWeapon(ctx,camera,selectedItem,itemTextures)
+    const loot = generateLoot(tile.luck || 1);
+    addItemToInventory(loot);
+  }
+});
 
- drawInventory()
+canvas.addEventListener("mouseup", e => {
+  mouse.x = e.clientX; mouse.y = e.clientY;
+  if (!draggedItem) return;
 
- drawHotbar()
+  const s = getSlot(mouse.x, mouse.y);
+  if (s) {
+    if (s.t === "h" && !hotbar[s.i]) { hotbar[s.i] = draggedItem; console.log("[DROP] Hotbar slot", s.i, draggedItem.name); draggedItem = null; return; }
+    if (s.t === "i" && !inventory[s.i]) { inventory[s.i] = draggedItem; console.log("[DROP] Inventory slot", s.i, draggedItem.name); draggedItem = null; return; }
+  }
 
- if(draggedItem && draggedItem.image){
+  for (let i = 0; i < inventory.length; i++) {
+    if (!inventory[i]) { inventory[i] = draggedItem; console.log("[DROP] Inventory fallback slot", i, draggedItem.name); draggedItem = null; return; }
+  }
 
-  ctx.drawImage(
-   draggedItem.image,
-   mouse.x-SLOT_SIZE/2,
-   mouse.y-SLOT_SIZE/2,
-   SLOT_SIZE,
-   SLOT_SIZE
-  )
+  draggedItem = null;
+});
 
- }
+canvas.addEventListener("mousemove", e => { mouse.x = e.clientX; mouse.y = e.clientY; });
 
- if(combat){
+window.addEventListener("wheel", e => {
+  if (inventoryOpen) return;
+  if (e.deltaY < 0) selectedHotbar = (selectedHotbar + 1) % hotbar.length;
+  if (e.deltaY > 0) selectedHotbar = (selectedHotbar - 1 + hotbar.length) % hotbar.length;
+  console.log("[HOTBAR] Selected slot", selectedHotbar);
+});
 
-  combat.drawUI(ctx,canvas)
+window.addEventListener("keydown", e => {
+  const key = e.key.toLowerCase();
+  if (key === "e") { inventoryOpen = !inventoryOpen; console.log("[INPUT] Inventory toggle:", inventoryOpen); }
+  if (key === "arrowright") { selectedHotbar = (selectedHotbar + 1) % hotbar.length; console.log("[INPUT] Hotbar right", selectedHotbar); }
+  if (key === "arrowleft") { selectedHotbar = (selectedHotbar - 1 + hotbar.length) % hotbar.length; console.log("[INPUT] Hotbar left", selectedHotbar); }
+});
 
- }
+// --- GAME LOOP ---
+function update() {
+  player.update(world, mouse, camera);
+  camera.x = player.x - canvas.width / 2;
+  camera.y = player.y - canvas.height / 2;
 
+  if (hotbar[selectedHotbar] && mouseDown && combat) {
+    combat.attack(enemies, hotbar[selectedHotbar], mouse.x, mouse.y, camera, performance.now());
+    console.log("[COMBAT] Continuous attack with", hotbar[selectedHotbar].name);
+  }
 }
 
-function loop(){
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
- update()
- draw()
+  world.draw(ctx, camera);
+  player.draw(ctx, camera);
 
- requestAnimationFrame(loop)
+  const selectedItem = hotbar[selectedHotbar];
+  player.drawWeapon(ctx, camera, selectedItem, itemTextures);
 
+  drawInventory();
+  drawHotbar();
+
+  if (draggedItem && draggedItem.image) {
+    ctx.drawImage(draggedItem.image, mouse.x - SLOT_SIZE / 2, mouse.y - SLOT_SIZE / 2, SLOT_SIZE, SLOT_SIZE);
+  }
+
+  if (combat) {
+    combat.drawUI(ctx, canvas);
+  }
 }
 
-window.addEventListener("resize",()=>{
-
- canvas.width = window.innerWidth
- canvas.height = window.innerHeight
-
-})
-
-async function init(){
-
- await loadBlocks()
- await loadTextures()
- await loadItems()
-
- window.structures = new StructureManager(blocks)
-
- await window.structures.loadAll()
-
- player = new Player()
-
- world = new World(blocks,textures,canvas)
-
- combat = new Combat(player)
-
- let img = new Image()
-
- img.src = "assets/stick.png"
-
- await new Promise(r=>img.onload=r)
-
- img = await makeTransparent(img)
-
- hotbar[0] = {
-  name:"Stick",
-  type:"basic",
-  image:img,
-  damage:2,
-  range:{width:3,length:3}
- }
-
- loop()
-
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
 }
 
-init()
+// --- RESIZE ---
+window.addEventListener("resize", () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+// --- INIT ---
+async function init() {
+  console.log("[INIT] Loading game");
+  await loadBlocks();
+  await loadTextures();
+  await loadItems();
+
+  window.structures = new StructureManager(blocks);
+  await window.structures.loadAll();
+
+  player = new Player();
+  world = new World(blocks, textures, canvas);
+  combat = new Combat(player);
+
+  const img = new Image();
+  img.src = "assets/stick.png";
+  await new Promise(r => img.onload = r);
+  const stick = await makeTransparent(img);
+  hotbar[0] = { name: "Stick", type: "basic", image: stick, damage: 2, range: { width: 3, length: 3 } };
+
+  console.log("[INIT] Game loaded");
+  loop();
+}
+
+init();
