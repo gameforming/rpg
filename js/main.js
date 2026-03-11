@@ -86,6 +86,7 @@ function drawHotbar(){
 }
 
 function drawInventory(){
+ console.log("drawing inventory")
  if(!inventoryOpen)return
  let s=invStart()
  for(let r=0;r<ROWS;r++){
@@ -216,18 +217,27 @@ window.addEventListener("wheel",e=>{
  if(e.deltaY>0)selectedHotbar=(selectedHotbar-1+hotbar.length)%hotbar.length
 })
 
-window.addEventListener("keydown",e=>{
- if(e.key.toLowerCase()==="e")inventoryOpen=!inventoryOpen
+window.addEventListener("keydown", (e) => {
 
- if(e.key==="ArrowRight"){
-  selectedHotbar=(selectedHotbar+1)%hotbar.length
+ const key = e.key.toLowerCase()
+
+ switch(key){
+
+  case "e":
+   inventoryOpen = !inventoryOpen
+   break
+
+  case "arrowright":
+   selectedHotbar = (selectedHotbar + 1) % hotbar.length
+   break
+
+  case "arrowleft":
+   selectedHotbar = (selectedHotbar - 1 + hotbar.length) % hotbar.length
+   break
+
  }
 
- if(e.key==="ArrowLeft"){
-  selectedHotbar=(selectedHotbar-1+hotbar.length)%hotbar.length
- }
 })
-
 function update(){
   // altijd updaten
   player.update(world, mouse, camera)
