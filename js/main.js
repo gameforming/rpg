@@ -305,7 +305,7 @@ function drawItemTooltip() {
 
   // teken tooltip
   const padding = 6;
-  ctx.font = "16px Arial";F
+  ctx.font = "16px Arial";
   const width = ctx.measureText(name).width + padding * 2;
   const height = 20 + padding * 2;
 
