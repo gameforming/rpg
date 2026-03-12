@@ -96,9 +96,10 @@ drawWeapon(ctx, camera, selectedItem, itemTextures){
 if(!selectedItem) return
 if(selectedItem.type !== "weapon") return
 
-const texture = itemTextures[selectedItem.id]
-if(!texture) return
+const texture = itemTextures[selectedItem.id] || selectedItem.image;
+if (!texture) return;
 
+ctx.drawImage(texture, -16, -16, 32, 32);
 let angle = this.weaponAngle
 
 if(this.weaponSwinging){
