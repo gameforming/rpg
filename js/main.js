@@ -287,6 +287,39 @@ function update() {
     console.log("[COMBAT] Continuous attack with", hotbar[selectedHotbar].name);
   }
 }
+function drawItemTooltip() {
+  if (!inventoryOpen) return; // alleen tonen als inventory open
+
+  const s = getSlot(mouse.x, mouse.y);
+  if (!s) return;
+
+  let item = null;
+  if (s.t === "i") item = inventory[s.i];
+  if (s.t === "h") item = hotbar[s.i];
+
+  if (!item) return;
+
+  // haal de naam en verwijder .png of andere extensie
+  let name = item.name || "Unknown";
+  name = name.replace(/\.[^/.]+$/, ""); // verwijder extensie
+
+  // teken tooltip
+  const padding = 6;
+  ctx.font = "16px Arial";F
+  const width = ctx.measureText(name).width + padding * 2;
+  const height = 20 + padding * 2;
+
+  let x = mouse.x + 15;
+  let y = mouse.y - height - 5;
+  if (x + width > canvas.width) x = canvas.width - width - 10;
+  if (y < 0) y = mouse.y + 15;
+
+  ctx.fillStyle = "rgba(0,0,0,0.8)";
+  ctx.fillRect(x, y, width, height);
+
+  ctx.fillStyle = "white";
+  ctx.fillText(name, x + padding, y + padding + 14);
+}
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -299,6 +332,7 @@ function draw() {
 
   drawInventory();
   drawHotbar();
+  drawitemtooltip();
 
   if (draggedItem && draggedItem.image) {
     ctx.drawImage(draggedItem.image, mouse.x - SLOT_SIZE / 2, mouse.y - SLOT_SIZE / 2, SLOT_SIZE, SLOT_SIZE);
