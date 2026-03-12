@@ -332,7 +332,7 @@ function draw() {
 
   drawInventory();
   drawHotbar();
-  drawitemtooltip();
+  drawItemTooltip();
 
   if (draggedItem && draggedItem.image) {
     ctx.drawImage(draggedItem.image, mouse.x - SLOT_SIZE / 2, mouse.y - SLOT_SIZE / 2, SLOT_SIZE, SLOT_SIZE);
