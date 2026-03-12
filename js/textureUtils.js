@@ -1,36 +1,36 @@
-// textureUtils.js
-// Functie: maakt een afbeelding transparant waar pixels zwart zijn
+export async function makeTransparent(img) {
+    // Maak een canvas van dezelfde grootte
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext("2d");
 
-export async function makeTransparent(img){
-  // maak een tijdelijk canvas
-  const c = document.createElement("canvas")
-  c.width = img.width
-  c.height = img.height
-  const ctx = c.getContext("2d")
+    // Teken de originele afbeelding
+    ctx.drawImage(img, 0, 0);
 
-  // teken afbeelding op canvas
-  ctx.drawImage(img, 0, 0)
+    // Pak pixeldata
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
 
-  // haal pixeldata op
-  const data = ctx.getImageData(0, 0, c.width, c.height)
+    // Loop door alle pixels
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
 
-  // loop over alle pixels
-  for(let i = 0; i < data.data.length; i += 4){
-    const r = data.data[i]
-    const g = data.data[i+1]
-    const b = data.data[i+2]
-    // als pixel zwart, maak volledig transparant
-    if(r === 0 && g === 0 && b === 0){
-      data.data[i+3] = 0
+        // Alleen wit (255,255,255) transparant maken
+        if (r === 255 && g === 255 && b === 255) {
+            data[i + 3] = 0; // alpha = 0
+        }
     }
-  }
 
-  ctx.putImageData(data, 0, 0)
+    // Zet de aangepaste data terug
+    ctx.putImageData(imageData, 0, 0);
 
-  // maak een nieuwe Image en return als promise
-  return new Promise(res => {
-    const out = new Image()
-    out.src = c.toDataURL()
-    out.onload = () => res(out)
-  })
+    // Maak een nieuwe Image en wacht tot hij geladen is
+    const transparentImg = new Image();
+    transparentImg.src = canvas.toDataURL();
+    await new Promise(r => transparentImg.onload = r);
+
+    return transparentImg;
 }
