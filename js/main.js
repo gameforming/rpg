@@ -361,6 +361,9 @@ async function init() {
   await loadBlocks();
   await loadTextures();
   await loadItems();
+  for (const id in items) {
+    itemTextures[id] = await makeTransparent(items[id].texture);
+  }
 
   window.structures = new StructureManager(blocks);
   await window.structures.loadAll();
@@ -373,13 +376,13 @@ async function init() {
   stickTexture.src = "assets/stick.png";
   await new Promise(r => stickTexture.onload = r);
 
-  hotbar[0] = {
-      id: "stick",
-      name: "Stick",
-      type: "weapon",
-      image: stickTexture,
-      damage: 2
-  };
+ hotbar[0] = {
+    id: "stick",
+    name: "Stick",
+    type: "weapon",
+    image: await makeTransparent("assets/stick.png"),
+    damage: 2
+ };
   console.log("[INIT] Game loaded");
   loop();
 }
