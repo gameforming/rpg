@@ -369,12 +369,17 @@ async function init() {
   world = new World(blocks, textures, canvas);
   combat = new Combat(player);
 
-  const img = new Image();
-  img.src = "assets/stick.png";
-  await new Promise(r => img.onload = r);
-  const stick = await makeTransparent(img);
-  hotbar[0] = { name: "Stick", type: "basic", image: stick, damage: 2, range: { width: 3, length: 3 } };
+  const stickTexture = await makeTransparent(new Image());
+  stickTexture.src = "assets/stick.png";
+  await new Promise(r => stickTexture.onload = r);
 
+  hotbar[0] = {
+      id: "stick",
+      name: "Stick",
+      type: "weapon",
+      image: stickTexture,
+      damage: 2
+  };
   console.log("[INIT] Game loaded");
   loop();
 }
