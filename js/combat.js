@@ -96,7 +96,7 @@ for (let e of enemiesManager.enemies) {
         if (e.hp <= 0) {
             e.dead = true;
             this.gainXp(10); // XP per kill
-            // ⭐ Voeg hier ook gold drop toe
+            // ⭐ Voeg hier ook gold drop toe ok
             this.gold += e.gold || 0;
         }
     }
