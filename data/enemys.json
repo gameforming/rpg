@@ -6,5 +6,6 @@
     "damage": 3,
     "range": { "length": 5 },
     "weapon": "stick"
+    "gold": 7
   }
 }
