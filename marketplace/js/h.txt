@@ -1,1 +1,2 @@
 hier komen alle js bestanden te staan voor de marketplace
+deze gaan samenwerken met de server
