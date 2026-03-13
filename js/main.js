@@ -3,6 +3,7 @@ import { makeTransparent } from "./textureUtils.js";
 import { World } from "./world.js";
 import { StructureManager } from "./structures.js";
 import { Combat } from "./combat.js";
+import { EnemyManager } from "./enemies.js"; // ✅ toegevoegd
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -14,7 +15,7 @@ canvas.height = window.innerHeight;
 let world;
 let player;
 let combat = null;
-let enemies = []; // moet een array van enemy objects zijn
+let enemiesManager = null; // ✅ vervangt de oude enemies array
 
 let items = {};
 let itemTextures = {};
@@ -206,7 +207,7 @@ canvas.addEventListener("mousedown", e => {
 
     const weapon = hotbar[selectedHotbar];
     if (weapon && weapon.damage && combat) {
-        combat.attack(enemies, weapon, mouse.x, mouse.y, camera, performance.now());
+        combat.attack(enemiesManager.enemies, weapon, mouse.x, mouse.y, camera, performance.now());
     }
 
     const wx = mouse.x + camera.x;
@@ -244,15 +245,17 @@ function update() {
     camera.x = player.x - canvas.width / 2;
     camera.y = player.y - canvas.height / 2;
 
+    enemiesManager?.update(player, performance.now()); // ✅ enemy update
+
     const weapon = hotbar[selectedHotbar];
     if (weapon && combat) {
         // Space attack
         if (player.keys[" "] || player.keys["space"] || player.keys["spacebar"]) {
-            combat.attack(enemies, weapon, mouse.x, mouse.y, camera, performance.now());
+            combat.attack(enemiesManager.enemies, weapon, mouse.x, mouse.y, camera, performance.now());
         }
         // Mouse continuous attack
         if (mouseDown) {
-            combat.attack(enemies, weapon, mouse.x, mouse.y, camera, performance.now());
+            combat.attack(enemiesManager.enemies, weapon, mouse.x, mouse.y, camera, performance.now());
         }
     }
 }
@@ -295,6 +298,8 @@ function draw() {
     }
 
     if (combat) combat.drawUI(ctx, canvas);
+
+    enemiesManager?.draw(ctx, camera); // ✅ draw enemies
 }
 
 function loop() {
@@ -317,11 +322,17 @@ async function init() {
     player = new Player();
     world = new World(blocks, textures, canvas);
 
+    // ✅ EnemyManager initialiseren
+    const enemyTypesResp = await fetch("data/enemys.json");
+    const enemyTypes = await enemyTypesResp.json();
+    enemiesManager = new EnemyManager(enemyTypes);
+    world.enemyManager = enemiesManager;
+
     window.structures = new StructureManager();
     await window.structures.loadAll(["house.txt", "tree.txt"]);
     world.structuresManager = window.structures;
 
-    combat = new Combat(player, world); // world doorgeven!
+    combat = new Combat(player, world);
 
     const img = new Image();
     img.src = "assets/stick.png";
