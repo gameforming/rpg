@@ -9,7 +9,6 @@ export class World {
     this.chunkSize = 32
     this.chunks = {}
     this.structures = []
-
     this.enemies = []  // lijst van alle enemies in de wereld
 
     // spawn table: structure => kans per chunk
@@ -92,8 +91,8 @@ export class World {
 
     this.placeStructure(structure, worldX, worldY)
 
-    // ==== NIEUW: spawn enemies in structure ====
-    if (window.structures) {
+    // ==== spawn enemies binnen de structure ====
+    if (window.structures && window.structures.handleSpawns) {
       window.structures.handleSpawns(this, worldX, worldY, structure)
     }
   }
@@ -114,14 +113,22 @@ export class World {
     let w = structure[0].length
     let h = structure.length
 
-    // loop door alle tiles en zet chest-luck indien LTxx
+    // kopie grid zodat originele structuur intact blijft
     let grid = structure.map(row => row.slice())
+
+    // chest-luck verwerken
     for (let sy = 0; sy < h; sy++) {
       for (let sx = 0; sx < w; sx++) {
         let cell = grid[sy][sx]
-        if (typeof cell === "string" && cell.startsWith("LT")) {
-          let luck = parseInt(cell.substring(2)) || 1
-          grid[sy][sx] = { block: "chest", type: "c", luck }
+        if (typeof cell === "string") {
+          if (cell.startsWith("LT")) {
+            let luck = parseInt(cell.substring(2)) || 1
+            grid[sy][sx] = { block: "chest", type: "c", luck }
+          }
+          if (cell.startsWith("spawn.")) {
+            // spawn tile markeren, spawn.type = wat er gespawned moet worden
+            grid[sy][sx] = { spawn: cell.substring(6) }
+          }
         }
       }
     }
@@ -176,23 +183,27 @@ export class World {
   }
 
   // ======== ENEMY SPAWN FUNCTIES ========
-  spawnEnemy(type = "zombie") {
-    let x, y, tries = 0
+  spawnEnemy(type = "zombie", x = null, y = null) {
+    let posX = x
+    let posY = y
+    let tries = 0
 
-    do {
-      let chunkX = Math.floor(Math.random() * 10)  // pas aan naar world grootte
-      let chunkY = Math.floor(Math.random() * 10)
-      x = Math.floor(Math.random() * this.chunkSize) + chunkX * this.chunkSize
-      y = Math.floor(Math.random() * this.chunkSize) + chunkY * this.chunkSize
-      tries++
-      if(tries > 100) return null
-    } while (!this.isWalkable(x, y))
+    if (posX === null || posY === null) {
+      do {
+        let chunkX = Math.floor(Math.random() * 10)
+        let chunkY = Math.floor(Math.random() * 10)
+        posX = Math.floor(Math.random() * this.chunkSize) + chunkX * this.chunkSize
+        posY = Math.floor(Math.random() * this.chunkSize) + chunkY * this.chunkSize
+        tries++
+        if(tries > 100) return null
+      } while (!this.isWalkable(posX, posY))
+    }
 
     const enemy = {
       id: crypto.randomUUID(),
       type: type,
-      x: x + 0.5,   // center in tile
-      y: y + 0.5,
+      x: posX + 0.5,
+      y: posY + 0.5,
       hp: 20,
       dead: false
     }
@@ -214,7 +225,7 @@ export class World {
 
     // blok onder de plank
     let baseTile = this.getBaseTile(x, y + 1)
-    if(baseTile) baseTile.block = "plank"  // of een ander type
+    if(baseTile) baseTile.block = "plank"
     return enemy
   }
 
@@ -239,6 +250,7 @@ export class World {
       for (let x = startX; x < endX; x++) {
         let structureTile = this.getStructureTile(x, y)
         if (!structureTile) continue
+        if(structureTile.spawn) continue // spawn tiles worden niet getekend
         let block = this.blocks[structureTile.block]
         if (!block) console.warn("WORLD: structure block niet gevonden", structureTile.block)
         let tex = this.textures[block.texture]
