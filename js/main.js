@@ -33,9 +33,6 @@ let inventoryOpen = false;
 const SLOT_SIZE = 48;
 const COLS = 9;
 const ROWS = 3;
-const structures = new StructureManager();
-await structures.loadAll(["house.txt","tree.txt"]); // haal alles uit map
-world.structuresManager = structures; // geef mee aan World.js
 
 let openedChests = new Set();
 
@@ -360,7 +357,6 @@ window.addEventListener("resize", () => {
   canvas.height = window.innerHeight;
 });
 
-// --- INIT ---
 async function init() {
   console.log("[INIT] Loading game");
 
@@ -368,29 +364,26 @@ async function init() {
   await loadTextures();
   await loadItems();
 
-  window.structures = new StructureManager(blocks);
-  await window.structures.loadAll();
-
   player = new Player();
   world = new World(blocks, textures, canvas);
+
+  // StructureManager laden **na world**
+  window.structures = new StructureManager();
+  await window.structures.loadAll(["house.txt", "tree.txt"]);
+  world.structuresManager = window.structures;
+
   combat = new Combat(player);
 
+  // hotbar setup
   const img = new Image();
   img.src = "assets/stick.png";
   await new Promise(r => img.onload = r);
-
   const stickTexture = await makeTransparent(img);
-
-  hotbar[0] = {
-    id: "stick",
-    name: "Stick",
-    type: "weapon",
-    image: stickTexture,
-    damage: 2
-  };
+  hotbar[0] = { id: "stick", name: "Stick", type: "weapon", image: stickTexture, damage: 2 };
 
   console.log("[INIT] Game loaded");
   loop();
+
 }
 
 init();
