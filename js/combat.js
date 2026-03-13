@@ -6,7 +6,7 @@ export class Combat {
     this.xp = 0                 // start XP
     this.maxXp = 100 + 10 * this.level
     this.lastAttack = 0
-    this.attackCooldown = 1000  // 1 seconde cooldown
+    this.attackCooldown = 500  // halve seconde cooldown
   }
 
   // XP toevoegen en levels updaten
@@ -27,19 +27,24 @@ export class Combat {
     return time - this.lastAttack >= this.attackCooldown
   }
 
-  // aanval functie
-  attack(enemies, weapon, mouseX, mouseY, camera, time){
+  // Spatie-triggered aanval
+  attack(enemies, weapon, mouseX, mouseY, camera, time, input){
+    // check input: alleen spatie start de attack
+    if(!input.keys[" "] && !input.keys["space"] && !input.keys["spacebar"]) return
     if(!weapon || !this.canAttack(time)) return
+
     this.lastAttack = time
-    
-    // gebruik this.player in plaats van globale player
-    this.player.weaponSwing = 0;
-    this.player.weaponSwinging = true;
-    
+
+    // start swing animatie
+    if(!this.player.weaponSwinging){
+      this.player.weaponSwinging = true
+      this.player.weaponSwing = 0
+    }
+
     let wx = this.player.x
     let wy = this.player.y
 
-    // gebruik weapon range of default
+    // weapon range
     let range = weapon.range || {width:3,length:3}
     let attackWidth = range.width * this.world.tileSize
     let attackLength = range.length * this.world.tileSize
@@ -49,7 +54,7 @@ export class Combat {
     let dy = mouseY + camera.y - wy
     let angle = Math.atan2(dy, dx)
 
-    // axis-aligned attack box in de richting van de muis
+    // attack box
     let halfW = attackWidth / 2
     let attackRect = {
       x: wx + Math.cos(angle) * attackLength - halfW,
@@ -58,23 +63,23 @@ export class Combat {
       h: attackWidth
     }
 
-    // damage toepassen op alle enemies in box
+    // damage toepassen op enemies in box
     for(let e of enemies.enemies){
       if(e.dead) continue
       if(e.x > attackRect.x && e.x < attackRect.x + attackRect.w &&
          e.y > attackRect.y && e.y < attackRect.y + attackRect.h){
         e.hp -= weapon.damage
         if(e.hp <= 0) e.dead = true
-        this.gainXp(10) // XP per kill/hit
+        this.gainXp(10)
       }
     }
   }
 
-  // UI tekenen: HP linksboven, Level+XP rechtsboven
+  // UI tekenen
   drawUI(ctx, canvas){
     // HP linksboven
     let hpBarWidth = 200
-    let hp = this.player.hp || 1      // fallback als undefined
+    let hp = this.player.hp || 1
     let maxHp = this.player.maxHp || 1
     ctx.fillStyle = "black"
     ctx.fillRect(20, 20, hpBarWidth, 20)
@@ -86,7 +91,7 @@ export class Combat {
     ctx.font = "16px Arial"
     ctx.fillText(`HP: ${hp}/${maxHp}`, 25, 35)
 
-    // Level + XP balk rechtsboven
+    // Level + XP rechtsboven
     let xpBarWidth = 150
     let xPos = canvas.width - xpBarWidth - 20
     ctx.fillStyle = "black"
