@@ -9,10 +9,9 @@ export class World {
     this.chunkSize = 32
     this.chunks = {}
     this.structures = []
-    this.enemies = []  // lijst van alle enemies in de wereld
-    this.enemyManager = enemyManager // <-- nieuwe toevoeging
+    this.enemies = []
+    this.enemyManager = enemyManager
 
-    // spawn table: structure => kans per chunk
     this.structureChances = {
       tree: 0.8,
       house: 0.2
@@ -92,18 +91,20 @@ export class World {
 
     this.placeStructure(structure, worldX, worldY)
 
-    // ==== TOEGEVOEGD: spawn enemies via EnemyManager ====
-    if (window.structures && window.structures.handleSpawns && this.enemyManager) {
-      window.structures.handleSpawns(this.enemyManager, worldX, worldY, structure)
+    // FIX: world doorgeven i.p.v enemyManager
+    if (window.structures && window.structures.handleSpawns) {
+      window.structures.handleSpawns(this, worldX, worldY, structure)
     }
   }
 
   checkOverlap(x, y, w, h) {
     for (let s of this.structures) {
-      if (x < s.x + s.w &&
-          x + w > s.x &&
-          y < s.y + s.h &&
-          y + h > s.y) {
+      if (
+        x < s.x + s.w &&
+        x + w > s.x &&
+        y < s.y + s.h &&
+        y + h > s.y
+      ) {
         return true
       }
     }
@@ -119,13 +120,41 @@ export class World {
     for (let sy = 0; sy < h; sy++) {
       for (let sx = 0; sx < w; sx++) {
         let cell = grid[sy][sx]
+
         if (typeof cell === "string") {
+
+          // chest luck tiles
           if (cell.startsWith("LT")) {
             let luck = parseInt(cell.substring(2)) || 1
             grid[sy][sx] = { block: "chest", type: "c", luck }
+            continue
           }
-          if (cell.startsWith("spawn.")) {
-            grid[sy][sx] = { spawn: cell.substring(6) }
+
+          // ===== NIEUWE PARSING =====
+          // planks.spawn.zombie.p
+
+          let parts = cell.split(".")
+
+          if (parts.includes("spawn")) {
+            let spawnIndex = parts.indexOf("spawn")
+            let block = parts[0] || "planks"
+            let enemy = parts[spawnIndex + 1] || "zombie"
+            let type = parts[spawnIndex + 2] || "p"
+
+            grid[sy][sx] = {
+              block: block,
+              type: type,
+              spawn: enemy
+            }
+            continue
+          }
+
+          // normale tiles
+          if (parts.length >= 2) {
+            grid[sy][sx] = {
+              block: parts[0],
+              type: parts[1]
+            }
           }
         }
       }
@@ -160,10 +189,7 @@ export class World {
     let tx = ((wx % this.chunkSize) + this.chunkSize) % this.chunkSize
     let ty = ((wy % this.chunkSize) + this.chunkSize) % this.chunkSize
 
-    let tile = chunk[ty][tx]
-    if (!tile) console.error("WORLD: base tile bestaat niet", wx, wy)
-
-    return tile
+    return chunk[ty][tx]
   }
 
   getTile(wx, wy) {
@@ -173,15 +199,17 @@ export class World {
 
   isWalkable(wx, wy) {
     let tile = this.getTile(wx, wy)
-    if (!tile) {
-      console.error("WORLD: walkable check tile ontbreekt", wx, wy)
-      return true
-    }
+    if (!tile) return true
     return tile.type !== "w"
   }
 
-  // ======== ENEMY SPAWN FUNCTIES (alles behouden) ========
   spawnEnemy(type = "zombie", x = null, y = null) {
+
+    // gebruik EnemyManager als die bestaat
+    if (this.enemyManager) {
+      return this.enemyManager.spawn(type, x, y)
+    }
+
     let posX = x
     let posY = y
     let tries = 0
@@ -193,7 +221,7 @@ export class World {
         posX = Math.floor(Math.random() * this.chunkSize) + chunkX * this.chunkSize
         posY = Math.floor(Math.random() * this.chunkSize) + chunkY * this.chunkSize
         tries++
-        if(tries > 100) return null
+        if (tries > 100) return null
       } while (!this.isWalkable(posX, posY))
     }
 
@@ -210,23 +238,8 @@ export class World {
     return enemy
   }
 
-  spawnPlankZombie(x, y) {
-    const enemy = {
-      id: crypto.randomUUID(),
-      type: "zombie",
-      x: x + 0.5,
-      y: y + 0.5,
-      hp: 20,
-      dead: false
-    }
-    this.enemies.push(enemy)
-
-    let baseTile = this.getBaseTile(x, y + 1)
-    if(baseTile) baseTile.block = "plank"
-    return enemy
-  }
-
   draw(ctx, camera) {
+
     let startX = Math.floor(camera.x / this.tileSize) - 2
     let startY = Math.floor(camera.y / this.tileSize) - 2
     let endX = startX + Math.ceil(this.canvas.width / this.tileSize) + 4
@@ -236,9 +249,7 @@ export class World {
       for (let x = startX; x < endX; x++) {
         let base = this.getBaseTile(x, y)
         let block = this.blocks[base.block]
-        if (!block) console.warn("WORLD: base block niet gevonden", base.block)
         let tex = this.textures[block.texture]
-        if (!tex) console.warn("WORLD: texture niet gevonden", block.texture)
         ctx.drawImage(tex, x * this.tileSize - camera.x, y * this.tileSize - camera.y, this.tileSize, this.tileSize)
       }
     }
@@ -247,32 +258,29 @@ export class World {
       for (let x = startX; x < endX; x++) {
         let structureTile = this.getStructureTile(x, y)
         if (!structureTile) continue
-        if(structureTile.spawn) continue // spawn tiles worden niet getekend
+        if (structureTile.spawn) continue
+
         let block = this.blocks[structureTile.block]
-        if (!block) console.warn("WORLD: structure block niet gevonden", structureTile.block)
         let tex = this.textures[block.texture]
-        if (!tex) console.warn("WORLD: structure texture niet gevonden", structureTile.texture)
+
         ctx.drawImage(tex, x * this.tileSize - camera.x, y * this.tileSize - camera.y, this.tileSize, this.tileSize)
       }
     }
 
-    // ====== TEKEN ENEMIES ======
-    // oude enemies
     for (let enemy of this.enemies) {
-      if(enemy.dead) continue
+      if (enemy.dead) continue
       ctx.fillStyle = "green"
       ctx.fillRect(
-        enemy.x * this.tileSize - camera.x - this.tileSize/2,
-        enemy.y * this.tileSize - camera.y - this.tileSize/2,
+        enemy.x * this.tileSize - camera.x - this.tileSize / 2,
+        enemy.y * this.tileSize - camera.y - this.tileSize / 2,
         this.tileSize,
         this.tileSize
       )
     }
 
-    // EnemyManager enemies (toegevoegd)
-    if(this.enemyManager) {
-      for(let enemy of this.enemyManager.enemies) {
-        if(enemy.dead) continue
+    if (this.enemyManager) {
+      for (let enemy of this.enemyManager.enemies) {
+        if (enemy.dead) continue
         enemy.draw(ctx, camera)
       }
     }
