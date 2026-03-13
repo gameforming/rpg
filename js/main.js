@@ -372,7 +372,7 @@ async function init() {
   await window.structures.loadAll(["house.txt", "tree.txt"]);
   world.structuresManager = window.structures;
 
-  combat = new Combat(player);
+  combat = new Combat(player,world);
 
   // hotbar setup
   const img = new Image();
