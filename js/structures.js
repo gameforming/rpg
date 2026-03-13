@@ -24,22 +24,14 @@ export class StructureManager {
         let parsedRow = []
 
         for (let cell of cols) {
-          if (cell.startsWith("LT")) {
-            // chest met luck
-            let luck = parseInt(cell.substring(2)) || 1
-            parsedRow.push({ block: "chest", type: "c", luck })
-          }
-          else if (cell.includes(".spawn.")) {
-            // generieke spawn tile
-            let parts = cell.split(".spawn.")
-            let blockName = parts[0]   // bv "plank"
-            let entityType = parts[1]  // bv "zombie"
-            parsedRow.push({ block: blockName, type: "p", spawn: entityType })
-          }
-          else {
-            let parts = cell.split(".")
-            let block = parts[0]
-            let type = parts[1] || "p"
+          let parts = cell.split(".")
+          let block = parts[0]
+          let type = parts[1] || "p"
+
+          // special spawn tile
+          if (block.startsWith("spawn")) {
+            parsedRow.push({ spawn: block.split(".")[1] }) // bv spawn.zombie -> {spawn:"zombie"}
+          } else {
             parsedRow.push({ block, type })
           }
         }
@@ -57,8 +49,7 @@ export class StructureManager {
   // laad **alle structures** uit een lijst
   async loadAll() {
     console.log("STRUCTURES: loadAll gestart")
-    // pas hier aan met alle structure namen die je wilt inladen
-    let list = ["tree", "house", "plank.spawnzombie"] // later uitbreidbaar
+    let list = ["tree", "house", "plank.spawnzombie"] // uitbreidbaar
 
     for (let s of list) {
       await this.loadStructure(s)
@@ -67,7 +58,6 @@ export class StructureManager {
     console.log("STRUCTURES: loadAll klaar, structures:", Object.keys(this.structures))
   }
 
-  // **hot reload** functie
   async reloadAll() {
     console.log("STRUCTURES: reloadAll gestart")
     this.structures = {}
@@ -75,7 +65,6 @@ export class StructureManager {
     console.log("STRUCTURES: reloadAll klaar")
   }
 
-  // kies een random structure
   getRandom() {
     let keys = Object.keys(this.structures)
     if (keys.length === 0) {
@@ -85,7 +74,6 @@ export class StructureManager {
     return this.structures[keys[Math.floor(Math.random() * keys.length)]]
   }
 
-  // kies een specifieke structure
   get(name) {
     if (!this.structures[name]) {
       console.warn("STRUCTURES: get() niet gevonden", name)
@@ -94,25 +82,27 @@ export class StructureManager {
     return this.structures[name]
   }
 
-  // ====== generieke spawn functie per tile ======
-  // gebruikt door world.js wanneer een structure wordt geplaatst
-  handleSpawns(world, x, y, grid) {
-    const height = grid.length
-    const width = grid[0].length
+  // ======== SPECIAL SPAWN HANDLER ========
+  // wordt vanuit World.spawnStructure aangeroepen
+  handleSpawns(world, worldX, worldY, structure) {
+    let h = structure.length
+    let w = structure[0].length
 
-    for (let sy = 0; sy < height; sy++) {
-      for (let sx = 0; sx < width; sx++) {
-        let tile = grid[sy][sx]
-        if (tile && tile.spawn) {
-          const wx = x + sx
-          const wy = y + sy
-          if (window.enemies) {
-            window.enemies.spawn(tile.spawn, wx, wy)
-            console.log(`STRUCTURES: enemy ${tile.spawn} gespawned op ${wx},${wy}`)
+    for (let sy = 0; sy < h; sy++) {
+      for (let sx = 0; sx < w; sx++) {
+        let cell = structure[sy][sx]
+
+        if (cell && cell.spawn) {
+          // spawn enemy op deze positie
+          world.spawnEnemy(cell.spawn, worldX + sx, worldY + sy)
+
+          // vervang de tile door een walkable tile zodat enemy niet vastzit
+          if (world.getStructureTile(worldX + sx, worldY + sy)) {
+            world.getStructureTile(worldX + sx, worldY + sy).block = "planks"
+            world.getStructureTile(worldX + sx, worldY + sy).type = "p"
           }
         }
       }
     }
   }
-
 }
