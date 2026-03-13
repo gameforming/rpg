@@ -1,116 +1,214 @@
-// structures.js
 export class StructureManager {
 
-  constructor(blocks) {
-    this.blocks = blocks
-    this.structures = {} // { name: grid }
+constructor(blocks) {
 
-    // ✅ lijst van structures met spawnkansen (per chunk)
-    this.structureChances = {
-      tree: 0.8,
-      house: 0.2
-    }
-  }
+    this.blocks = blocks;
+    this.structures = {}; // { name: grid }
 
-  // laad een enkele structure uit structures/<name>.txt
-  async loadStructure(name) {
+}
+
+
+// ===== LOAD SINGLE STRUCTURE =====
+
+async loadStructure(name) {
+
     try {
-      console.log("STRUCTURES: loading structure:", name)
-      let res = await fetch("structures/" + name + ".txt?cache=" + Date.now()) // cache-bust
-      if (!res.ok) {
-        console.error("STRUCTURES: file niet gevonden:", name)
-        return
-      }
 
-      let text = await res.text()
-      let rows = text.trim().split("\n")
-      let grid = []
+        console.log("STRUCTURES: loading structure:", name);
 
-      for (let row of rows) {
-        let cols = row.split(",")
-        let parsedRow = []
+        let res = await fetch("structures/" + name + ".txt?cache=" + Date.now());
 
-        for (let cell of cols) {
-          let parts = cell.split(".")
-          let block = parts[0]
-          let type = parts[1] || "p"
-
-          // special spawn tile
-          if (block.startsWith("spawn")) {
-            parsedRow.push({ spawn: block.split(".")[1] }) // bv spawn.zombie -> {spawn:"zombie"}
-          } else {
-            parsedRow.push({ block, type })
-          }
+        if (!res.ok) {
+            console.error("STRUCTURES: file niet gevonden:", name);
+            return;
         }
 
-        grid.push(parsedRow)
-      }
+        let text = await res.text();
 
-      this.structures[name] = grid
-      console.log("STRUCTURES: loaded structure:", name)
+        let rows = text.trim().split("\n");
+
+        let grid = [];
+
+        for (let row of rows) {
+
+            let cols = row.split(",");
+
+            let parsedRow = [];
+
+            for (let cell of cols) {
+
+                cell = cell.trim();
+
+                if (!cell) {
+                    parsedRow.push(null);
+                    continue;
+                }
+
+                let parts = cell.split(".");
+
+                let block = parts[0] || null;
+                let type = "p";
+                let spawn = null;
+
+                // voorbeeld:
+                // planks.spawn.zombie.p
+
+                if (parts.includes("spawn")) {
+
+                    let spawnIndex = parts.indexOf("spawn");
+
+                    spawn = parts[spawnIndex + 1] || null;
+
+                    if (parts[spawnIndex + 2]) {
+                        type = parts[spawnIndex + 2];
+                    }
+
+                } else if (parts[1]) {
+
+                    type = parts[1];
+
+                }
+
+                parsedRow.push({
+                    block,
+                    type,
+                    spawn
+                });
+
+            }
+
+            grid.push(parsedRow);
+
+        }
+
+        this.structures[name] = grid;
+
+        console.log("STRUCTURES: loaded structure:", name);
+
     } catch (err) {
-      console.error("STRUCTURES: fout bij laden", name, err)
-    }
-  }
 
-  // laad **alle structures** uit de lijst (tree en house)
-  async loadAll() {
-    console.log("STRUCTURES: loadAll gestart")
-    let list = ["tree", "house"]
+        console.error("STRUCTURES: fout bij laden", name, err);
+
+    }
+
+}
+
+
+// ===== LOAD ALL STRUCTURES =====
+
+async loadAll() {
+
+    console.log("STRUCTURES: loadAll gestart");
+
+    let list = [
+        "tree",
+        "house",
+        "plank.spawnzombie"
+    ];
 
     for (let s of list) {
-      await this.loadStructure(s)
+
+        await this.loadStructure(s);
+
     }
 
-    console.log("STRUCTURES: loadAll klaar, structures:", Object.keys(this.structures))
-  }
+    console.log("STRUCTURES: loadAll klaar", Object.keys(this.structures));
 
-  async reloadAll() {
-    console.log("STRUCTURES: reloadAll gestart")
-    this.structures = {}
-    await this.loadAll()
-    console.log("STRUCTURES: reloadAll klaar")
-  }
+}
 
-  getRandom() {
-    let keys = Object.keys(this.structures)
+
+// ===== RELOAD =====
+
+async reloadAll() {
+
+    console.log("STRUCTURES: reloadAll gestart");
+
+    this.structures = {};
+
+    await this.loadAll();
+
+    console.log("STRUCTURES: reloadAll klaar");
+
+}
+
+
+// ===== GET RANDOM =====
+
+getRandom() {
+
+    let keys = Object.keys(this.structures);
+
     if (keys.length === 0) {
-      console.warn("STRUCTURES: geen structures beschikbaar")
-      return null
-    }
-    return this.structures[keys[Math.floor(Math.random() * keys.length)]]
-  }
 
-  get(name) {
+        console.warn("STRUCTURES: geen structures beschikbaar");
+
+        return null;
+
+    }
+
+    return this.structures[
+        keys[Math.floor(Math.random() * keys.length)]
+    ];
+
+}
+
+
+// ===== GET BY NAME =====
+
+get(name) {
+
     if (!this.structures[name]) {
-      console.warn("STRUCTURES: get() niet gevonden", name)
-      return null
-    }
-    return this.structures[name]
-  }
 
-  // ======== SPECIAL SPAWN HANDLER ========
-  // wordt vanuit World.spawnStructure aangeroepen
-  handleSpawns(enemyManager, worldX, worldY, structure) {
-    let h = structure.length
-    let w = structure[0].length
+        console.warn("STRUCTURES: get() niet gevonden", name);
+
+        return null;
+
+    }
+
+    return this.structures[name];
+
+}
+
+
+// ===== SPAWN HANDLER =====
+
+handleSpawns(world, worldX, worldY, structure) {
+
+    let h = structure.length;
+    let w = structure[0].length;
 
     for (let sy = 0; sy < h; sy++) {
-      for (let sx = 0; sx < w; sx++) {
-        let cell = structure[sy][sx]
 
-        if (cell && cell.spawn) {
-          // Zorg dat plank aanwezig is op de spawn tile
-          const worldTile = enemyManager.world.getStructureTile(worldX + sx, worldY + sy)
-          if (worldTile) {
-            worldTile.block = "planks"
-            worldTile.type = "p"
-          }
+        for (let sx = 0; sx < w; sx++) {
 
-          // spawn de enemy via EnemyManager
-          enemyManager.spawn(cell.spawn, (worldX + sx) * 32, (worldY + sy) * 32)
+            let cell = structure[sy][sx];
+
+            if (!cell) continue;
+
+            if (cell.spawn) {
+
+                let x = worldX + sx;
+                let y = worldY + sy;
+
+                // spawn enemy
+                world.spawnEnemy(cell.spawn, x, y);
+
+                // vervang tile door plank
+                let tile = world.getStructureTile(x, y);
+
+                if (tile) {
+
+                    tile.block = "planks";
+                    tile.type = "p";
+
+                }
+
+            }
+
         }
-      }
+
     }
-  }
+
+}
+
 }
