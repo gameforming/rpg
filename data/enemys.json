@@ -1,13 +1,10 @@
 {
- "zombie":{
-  "texture":"zombie.png",
-  "hp":30,
-  "speed":0.6,
-  "damage":3,
-  "range":{"width":3,"length":5},
-  "weapon":"stick",
-  "attackfunction":"attackSword"
- }
-
- 
+  "zombie": {
+    "texture": "zombie.png",
+    "hp": 30,
+    "speed": 0.6,
+    "damage": 3,
+    "range": { "length": 5 },
+    "weapon": "stick"
+  }
 }
