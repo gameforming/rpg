@@ -47,20 +47,29 @@ export class StructureManager {
 
     for (let sy = 0; sy < h; sy++) {
       for (let sx = 0; sx < w; sx++) {
-        const cell = grid[sy][sx];
+        let cell = grid[sy][sx];
+
         if (typeof cell === "string") {
-          // chest
+          // chest met loot
           if (cell.startsWith("LT")) {
             grid[sy][sx] = { block: "chest", type: "c", luck: parseInt(cell.substring(2)) || 1 };
           }
-          // spawn
+          // spawn syntax: spawn.zombie.p
           else if (cell.startsWith("spawn.")) {
-            grid[sy][sx] = { spawn: cell.substring(6).replace(".p","") };
+            const parts = cell.split(".");
+            if (parts.length >= 3) {
+              const type = parts[1];       // enemy type
+              const subtype = parts[2];    // p = pathfinding, kan uitbreiden
+              grid[sy][sx] = { spawn: type, pathfinding: subtype === "p" };
+            } else {
+              grid[sy][sx] = { spawn: parts[1] };
+            }
           }
         }
       }
     }
 
+    // Voeg structuur toe aan wereld
     world.structures.push({ x: wx, y: wy, w, h, grid });
   }
 
@@ -79,18 +88,20 @@ export class StructureManager {
         const cell = structure[sy][sx];
         if (typeof cell === "object" && cell.spawn) {
           const type = cell.spawn;
-          enemyManager.spawn(type, wx + sx, wy + sy);
+          const pathfinding = cell.pathfinding || false;
+          enemyManager.spawn(type, wx + sx, wy + sy, pathfinding);
         }
       }
     }
   }
 
-  // Kies random structuur op basis van chance
+  // Kies random structuur op basis van kans
   getRandomStructure() {
     const names = Object.keys(this.structures);
     const filtered = names.filter(name => Math.random() < (this.metadata[name]?.chance || 0.2));
     if (filtered.length === 0) return null;
-    return this.structures[filtered[Math.floor(Math.random() * filtered.length)]];
+    const name = filtered[Math.floor(Math.random() * filtered.length)];
+    return this.structures[name];
   }
 
   // Spawn meerdere structuren in chunk
@@ -116,12 +127,14 @@ export class StructureManager {
     }
   }
 
-  // Optioneel: lijst van alle structuren + kans voor debug / configuratie
+  // ✅ Lijst van structuren + kans & rare
   getStructureList() {
     return Object.keys(this.structures).map(name => ({
       name,
       chance: this.metadata[name]?.chance || 0.2,
-      rare: this.metadata[name]?.rare || false
+      rare: this.metadata[name]?.rare || false,
+      width: this.structures[name][0].length,
+      height: this.structures[name].length
     }));
   }
 }
