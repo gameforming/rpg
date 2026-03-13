@@ -118,7 +118,7 @@ wx - camera.x,
 wy - camera.y
 )
 
-ctx.rotate(angle)
+ctx.rotate(angle - Math.PI / 4);
 
 ctx.globalAlpha = this.weaponSwinging ? 1 : 0.6
 
