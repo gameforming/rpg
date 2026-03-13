@@ -10,6 +10,8 @@ export class World {
     this.chunks = {}
     this.structures = []
 
+    this.enemies = []  // lijst van alle enemies in de wereld
+
     // spawn table: structure => kans per chunk
     this.structureChances = {
       tree: 0.8,
@@ -168,6 +170,49 @@ export class World {
     return tile.type !== "w"
   }
 
+  // ======== ENEMY SPAWN FUNCTIES ========
+  spawnEnemy(type = "zombie") {
+    let x, y, tries = 0
+
+    do {
+      let chunkX = Math.floor(Math.random() * 10)  // pas aan naar world grootte
+      let chunkY = Math.floor(Math.random() * 10)
+      x = Math.floor(Math.random() * this.chunkSize) + chunkX * this.chunkSize
+      y = Math.floor(Math.random() * this.chunkSize) + chunkY * this.chunkSize
+      tries++
+      if(tries > 100) return null
+    } while (!this.isWalkable(x, y))
+
+    const enemy = {
+      id: crypto.randomUUID(),
+      type: type,
+      x: x + 0.5,   // center in tile
+      y: y + 0.5,
+      hp: 20,
+      dead: false
+    }
+
+    this.enemies.push(enemy)
+    return enemy
+  }
+
+  spawnPlankZombie(x, y) {
+    const enemy = {
+      id: crypto.randomUUID(),
+      type: "zombie",
+      x: x + 0.5,
+      y: y + 0.5,
+      hp: 20,
+      dead: false
+    }
+    this.enemies.push(enemy)
+
+    // blok onder de plank
+    let baseTile = this.getBaseTile(x, y + 1)
+    if(baseTile) baseTile.block = "plank"  // of een ander type
+    return enemy
+  }
+
   draw(ctx, camera) {
     let startX = Math.floor(camera.x / this.tileSize) - 2
     let startY = Math.floor(camera.y / this.tileSize) - 2
@@ -192,9 +237,21 @@ export class World {
         let block = this.blocks[structureTile.block]
         if (!block) console.warn("WORLD: structure block niet gevonden", structureTile.block)
         let tex = this.textures[block.texture]
-        if (!tex) console.warn("WORLD: structure texture niet gevonden", block.texture)
+        if (!tex) console.warn("WORLD: structure texture niet gevonden", structureTile.texture)
         ctx.drawImage(tex, x * this.tileSize - camera.x, y * this.tileSize - camera.y, this.tileSize, this.tileSize)
       }
+    }
+
+    // ====== TEKEN ENEMIES ======
+    for (let enemy of this.enemies) {
+      if(enemy.dead) continue
+      ctx.fillStyle = "green"
+      ctx.fillRect(
+        enemy.x * this.tileSize - camera.x - this.tileSize/2,
+        enemy.y * this.tileSize - camera.y - this.tileSize/2,
+        this.tileSize,
+        this.tileSize
+      )
     }
   }
 }
