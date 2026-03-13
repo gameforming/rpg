@@ -16,6 +16,8 @@ export class Combat {
     // Currency
     this.gold = 0;
 
+    this.enemiesManager = null; // voeg toe en in main.js vullen
+
     // Player HP
     this.player.maxHp = this.player.maxHp || 100;
     this.player.hp = this.player.hp || this.player.maxHp;
