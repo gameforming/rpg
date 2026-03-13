@@ -313,7 +313,6 @@ window.addEventListener("resize", () => {
     canvas.height = window.innerHeight;
 });
 
-// --- INIT ---
 async function init() {
     await loadBlocks();
     await loadTextures();
@@ -322,25 +321,28 @@ async function init() {
     player = new Player();
     world = new World(blocks, textures, canvas);
 
-    // ✅ EnemyManager initialiseren
-    const enemyTypesResp = await fetch("data/enemys.json");
-    const enemyTypes = await enemyTypesResp.json();
-    enemiesManager = new EnemyManager(enemyTypes);
-    world.enemyManager = enemiesManager;
+    // --- EnemyManager ---
+    window.enemies = new EnemyManager(world); // world doorgeven voor pathfinding
+    await window.enemies.load();
+    world.enemyManager = window.enemies; // toegankelijk voor structures en combat
 
+    // --- StructureManager ---
     window.structures = new StructureManager();
     await window.structures.loadAll(["house.txt", "tree.txt"]);
     world.structuresManager = window.structures;
 
+    // --- Combat ---
     combat = new Combat(player, world);
-    combat.enemiesManager = enemies;
+    combat.enemiesManager = window.enemies; // zodat attack() werkt
 
+    // --- Start item: stick ---
     const img = new Image();
     img.src = "assets/stick.png";
     await new Promise(r => img.onload = r);
     const stickTexture = await makeTransparent(img);
     hotbar[0] = { id: "stick", name: "Stick", type: "weapon", image: stickTexture, damage: 2 };
 
+    // --- Start game loop ---
     loop();
 }
 
