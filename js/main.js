@@ -333,6 +333,7 @@ async function init() {
     world.structuresManager = window.structures;
 
     combat = new Combat(player, world);
+    combat.enemiesManager = enemies;
 
     const img = new Image();
     img.src = "assets/stick.png";
