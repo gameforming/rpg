@@ -88,7 +88,7 @@ export class Combat {
     };
 
     // damage toepassen
-    for(let e of enemies){
+    for (let e of enemiesManager.enemies) { ... }
 
       if(!e || e.dead) continue;
 
