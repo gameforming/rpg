@@ -88,33 +88,19 @@ export class Combat {
     };
 
     // damage toepassen
-    for (let e of enemiesManager.enemies) { ... }
-
-      if(!e || e.dead) continue;
-
-      if(
-        e.x > attackRect.x &&
-        e.x < attackRect.x + attackRect.w &&
-        e.y > attackRect.y &&
-        e.y < attackRect.y + attackRect.h
-      ){
-
+for (let e of enemiesManager.enemies) {
+    if (e.dead) continue;
+    if (e.x > attackRect.x && e.x < attackRect.x + attackRect.w &&
+        e.y > attackRect.y && e.y < attackRect.y + attackRect.h) {
         e.hp -= weapon.damage;
-
-        // enemy death
-        if(e.hp <= 0){
-
-          e.dead = true;
-
-          // XP gain
-          this.gainXp(10);
-
-          // GOLD DROP (uit enemy JSON)
-          const dropGold = e.gold || 0;
-          this.gold += dropGold;
+        if (e.hp <= 0) {
+            e.dead = true;
+            this.gainXp(10); // XP per kill
+            // ⭐ Voeg hier ook gold drop toe
+            this.gold += e.gold || 0;
         }
-      }
     }
+}
   }
 
   // UI tekenen
