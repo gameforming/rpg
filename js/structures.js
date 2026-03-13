@@ -44,7 +44,7 @@ export class StructureManager {
   async loadAll() {
     console.log("STRUCTURES: loadAll gestart")
     // pas hier aan met alle structure namen die je wilt inladen
-    let list = ["tree", "house"] // later uitbreidbaar
+    let list = ["tree", "house", "plank.spawnzombie"] // plank.spawnzombie toegevoegd
 
     for (let s of list) {
       await this.loadStructure(s)
@@ -78,6 +78,32 @@ export class StructureManager {
       return null
     }
     return this.structures[name]
+  }
+
+  // ====== SPECIAL SPAWN FUNCTIES ======
+  // spawn een plank met zombie op x,y
+  spawnPlankZombie(world, wx, wy) {
+    const structure = this.get("plank.spawnzombie")
+    if (!structure) {
+      console.warn("STRUCTURES: plank.spawnzombie niet geladen")
+      return null
+    }
+
+    let width = structure[0].length
+    let height = structure.length
+
+    // bepaal willekeurige offset binnen world (of gebruik wx, wy direct)
+    let posX = wx
+    let posY = wy
+
+    // zet structure in world
+    world.placeStructure(structure, posX, posY)
+
+    // spawn zombie exact op de plank
+    const enemy = world.spawnPlankZombie(posX, posY)
+
+    console.log("STRUCTURES: plank.spawnzombie geplaatst met enemy", enemy)
+    return enemy
   }
 
 }
