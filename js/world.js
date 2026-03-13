@@ -1,5 +1,5 @@
 export class World {
-  constructor(blocks, textures, canvas) {
+  constructor(blocks, textures, canvas, enemyManager) {
     console.log("WORLD: constructor gestart")
     this.canvas = canvas
 
@@ -10,6 +10,7 @@ export class World {
     this.chunks = {}
     this.structures = []
     this.enemies = []  // lijst van alle enemies in de wereld
+    this.enemyManager = enemyManager // <-- nieuwe toevoeging
 
     // spawn table: structure => kans per chunk
     this.structureChances = {
@@ -91,9 +92,9 @@ export class World {
 
     this.placeStructure(structure, worldX, worldY)
 
-    // ==== spawn enemies binnen de structure ====
-    if (window.structures && window.structures.handleSpawns) {
-      window.structures.handleSpawns(this, worldX, worldY, structure)
+    // ==== TOEGEVOEGD: spawn enemies via EnemyManager ====
+    if (window.structures && window.structures.handleSpawns && this.enemyManager) {
+      window.structures.handleSpawns(this.enemyManager, worldX, worldY, structure)
     }
   }
 
@@ -113,10 +114,8 @@ export class World {
     let w = structure[0].length
     let h = structure.length
 
-    // kopie grid zodat originele structuur intact blijft
     let grid = structure.map(row => row.slice())
 
-    // chest-luck verwerken
     for (let sy = 0; sy < h; sy++) {
       for (let sx = 0; sx < w; sx++) {
         let cell = grid[sy][sx]
@@ -126,7 +125,6 @@ export class World {
             grid[sy][sx] = { block: "chest", type: "c", luck }
           }
           if (cell.startsWith("spawn.")) {
-            // spawn tile markeren, spawn.type = wat er gespawned moet worden
             grid[sy][sx] = { spawn: cell.substring(6) }
           }
         }
@@ -182,7 +180,7 @@ export class World {
     return tile.type !== "w"
   }
 
-  // ======== ENEMY SPAWN FUNCTIES ========
+  // ======== ENEMY SPAWN FUNCTIES (alles behouden) ========
   spawnEnemy(type = "zombie", x = null, y = null) {
     let posX = x
     let posY = y
@@ -223,7 +221,6 @@ export class World {
     }
     this.enemies.push(enemy)
 
-    // blok onder de plank
     let baseTile = this.getBaseTile(x, y + 1)
     if(baseTile) baseTile.block = "plank"
     return enemy
@@ -260,6 +257,7 @@ export class World {
     }
 
     // ====== TEKEN ENEMIES ======
+    // oude enemies
     for (let enemy of this.enemies) {
       if(enemy.dead) continue
       ctx.fillStyle = "green"
@@ -269,6 +267,14 @@ export class World {
         this.tileSize,
         this.tileSize
       )
+    }
+
+    // EnemyManager enemies (toegevoegd)
+    if(this.enemyManager) {
+      for(let enemy of this.enemyManager.enemies) {
+        if(enemy.dead) continue
+        enemy.draw(ctx, camera)
+      }
     }
   }
 }
