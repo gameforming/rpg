@@ -1,5 +1,3 @@
-// combat.js
-
 export class Combat {
   constructor(player, world){
     this.player = player        // speler object
@@ -34,8 +32,9 @@ export class Combat {
     if(!weapon || !this.canAttack(time)) return
     this.lastAttack = time
     
-    player.weaponSwing = 0;
-    player.weaponSwinging = true;
+    // gebruik this.player in plaats van globale player
+    this.player.weaponSwing = 0;
+    this.player.weaponSwinging = true;
     
     let wx = this.player.x
     let wy = this.player.y
