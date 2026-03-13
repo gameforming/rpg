@@ -358,12 +358,10 @@ window.addEventListener("resize", () => {
 // --- INIT ---
 async function init() {
   console.log("[INIT] Loading game");
+
   await loadBlocks();
   await loadTextures();
   await loadItems();
-  for (const id in items) {
-    itemTextures[id] = await makeTransparent(items[id].texture);
-  }
 
   window.structures = new StructureManager(blocks);
   await window.structures.loadAll();
@@ -372,17 +370,20 @@ async function init() {
   world = new World(blocks, textures, canvas);
   combat = new Combat(player);
 
-  const stickTexture = await makeTransparent(new Image());
-  stickTexture.src = "assets/stick.png";
-  await new Promise(r => stickTexture.onload = r);
+  const img = new Image();
+  img.src = "assets/stick.png";
+  await new Promise(r => img.onload = r);
 
- hotbar[0] = {
+  const stickTexture = await makeTransparent(img);
+
+  hotbar[0] = {
     id: "stick",
     name: "Stick",
     type: "weapon",
-    image: await makeTransparent("assets/stick.png"),
+    image: stickTexture,
     damage: 2
- };
+  };
+
   console.log("[INIT] Game loaded");
   loop();
 }
