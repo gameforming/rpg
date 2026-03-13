@@ -27,11 +27,11 @@ this.keys[e.key.toLowerCase()] = false
 
 // Player.js
 update(world, mouse, camera){
-  const dx = mouse.x + camera.x - this.x
-  const dy = mouse.y + camera.y - this.y
-  this.weaponAngle = Math.atan2(dy, dx)
-  
 
+const dx = mouse.x + camera.x - this.x
+const dy = mouse.y + camera.y - this.y
+
+this.weaponAngle = Math.atan2(dy, dx)
 
 let newX = this.x
 let newY = this.y
@@ -43,15 +43,10 @@ if(this.keys["a"]) newX -= this.speed
 if(this.keys["d"]) newX += this.speed
 
 
-
-
-
-
-
 // swing animatie
 if(this.weaponSwinging){
 
-this.weaponSwing += 0.25
+this.weaponSwing += 0.35
 
 if(this.weaponSwing > Math.PI){
 
@@ -88,25 +83,31 @@ this.size,
 this.size
 )
 
-
 }
+
 
 drawWeapon(ctx, camera, selectedItem, itemTextures){
 
 if(!selectedItem) return
 if(selectedItem.type !== "weapon") return
 
-const texture = itemTextures[selectedItem.id] || selectedItem.image;
-if (!texture) return;
+const texture = itemTextures[selectedItem.id] || selectedItem.image
+if(!texture) return
 
-ctx.drawImage(texture, -16, -16, 32, 32);
 let angle = this.weaponAngle
 
+// swing rotatie
 if(this.weaponSwinging){
 angle += Math.sin(this.weaponSwing) * 0.8
 }
 
-const offset = 20
+// basis afstand van speler
+let offset = 20
+
+// naar voren en terug beweging
+if(this.weaponSwinging){
+offset += Math.sin(this.weaponSwing) * 10
+}
 
 const wx = this.x + Math.cos(this.weaponAngle) * offset
 const wy = this.y + Math.sin(this.weaponAngle) * offset
@@ -118,11 +119,12 @@ wx - camera.x,
 wy - camera.y
 )
 
-ctx.rotate(angle - Math.PI / 4);
+// correctie omdat sword sprite 45° gedraaid is getekend
+ctx.rotate(angle + Math.PI / 4)
 
 ctx.globalAlpha = this.weaponSwinging ? 1 : 0.6
 
-ctx.drawImage(texture,-16,-16,32,32)
+ctx.drawImage(texture, -16, -16, 32, 32)
 
 ctx.restore()
 
