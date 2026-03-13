@@ -8,6 +8,7 @@ export class Combat {
     this.maxXp = 100;           // start max XP
     this.lastAttack = 0;
     this.attackCooldown = 500;  // halve seconde cooldown
+    this.gold = 0; // ⭐ NIEUW
 
     // HP initialisatie
     this.player.maxHp = this.player.maxHp || 100;
