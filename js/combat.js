@@ -5,9 +5,13 @@ export class Combat {
     this.world = world;         // world object
     this.level = 1;             // start level
     this.xp = 0;                // start XP
-    this.maxXp = 100 + 10 * this.level;
+    this.maxXp = 100;           // start max XP
     this.lastAttack = 0;
     this.attackCooldown = 500;  // halve seconde cooldown
+
+    // HP initialisatie
+    this.player.maxHp = this.player.maxHp || 100;
+    this.player.hp = this.player.hp || this.player.maxHp;
   }
 
   // XP toevoegen en levels updaten
@@ -22,6 +26,9 @@ export class Combat {
   levelUp(){
     this.level++;
     this.maxXp = Math.floor(this.maxXp * 1.5);
+    // bij level up een beetje HP herstellen
+    this.player.maxHp = Math.floor(this.player.maxHp * 1.1);
+    this.player.hp = this.player.maxHp;
   }
 
   canAttack(time){
@@ -54,7 +61,7 @@ export class Combat {
     const dy = mouseY + camera.y - wy;
     const angle = Math.atan2(dy, dx);
 
-    // attack box
+    // simpele rechthoek voor collision
     const halfW = attackWidth / 2;
     const attackRect = {
       x: wx + Math.cos(angle) * attackLength - halfW,
@@ -63,14 +70,16 @@ export class Combat {
       h: attackWidth
     };
 
-    // damage toepassen op alle enemies in EnemyManager
+    // damage toepassen op alle enemies
     for(let e of enemiesManager.enemies){
       if(e.dead) continue;
       if(e.x > attackRect.x && e.x < attackRect.x + attackRect.w &&
          e.y > attackRect.y && e.y < attackRect.y + attackRect.h){
         e.hp -= weapon.damage;
-        if(e.hp <= 0) e.dead = true;
-        this.gainXp(10);
+        if(e.hp <= 0){
+          e.dead = true;
+          this.gainXp(10); // XP per kill
+        }
       }
     }
   }
@@ -79,14 +88,15 @@ export class Combat {
   drawUI(ctx, canvas){
     // HP linksboven
     const hpBarWidth = 200;
-    const hp = this.player.hp || 0;
-    const maxHp = this.player.maxHp || 1;
+    const hp = this.player.hp;
+    const maxHp = this.player.maxHp;
 
     ctx.fillStyle = "black";
     ctx.fillRect(20, 20, hpBarWidth, 20);
     ctx.fillStyle = "red";
     ctx.fillRect(20, 20, (hp/maxHp) * hpBarWidth, 20);
     ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
     ctx.strokeRect(20, 20, hpBarWidth, 20);
 
     ctx.fillStyle = "white";
@@ -96,6 +106,7 @@ export class Combat {
     // Level + XP rechtsboven
     const xpBarWidth = 150;
     const xPos = canvas.width - xpBarWidth - 20;
+
     ctx.fillStyle = "black";
     ctx.fillRect(xPos, 20, xpBarWidth, 20);
     ctx.fillStyle = "green";
