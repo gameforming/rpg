@@ -1,3 +1,4 @@
+// structures.js
 export class StructureManager {
 
   constructor(blocks) {
@@ -43,7 +44,6 @@ export class StructureManager {
   // laad **alle structures** uit een lijst
   async loadAll() {
     console.log("STRUCTURES: loadAll gestart")
-    // pas hier aan met alle structure namen die je wilt inladen
     let list = ["tree", "house", "plank.spawnzombie"] // plank.spawnzombie toegevoegd
 
     for (let s of list) {
@@ -92,15 +92,29 @@ export class StructureManager {
     let width = structure[0].length
     let height = structure.length
 
-    // bepaal willekeurige offset binnen world (of gebruik wx, wy direct)
-    let posX = wx
-    let posY = wy
-
     // zet structure in world
-    world.placeStructure(structure, posX, posY)
+    world.placeStructure(structure, wx, wy)
 
-    // spawn zombie exact op de plank
-    const enemy = world.spawnPlankZombie(posX, posY)
+    // vind een plank-tile binnen de structure (bijvoorbeeld type "p")
+    let plankTile = null
+    for (let sy = 0; sy < height; sy++) {
+      for (let sx = 0; sx < width; sx++) {
+        const cell = structure[sy][sx]
+        if (cell.block === "plank") {
+          plankTile = { x: wx + sx, y: wy + sy }
+          break
+        }
+      }
+      if (plankTile) break
+    }
+
+    if (!plankTile) {
+      console.warn("STRUCTURES: geen plank tile gevonden voor zombie spawn")
+      return null
+    }
+
+    // spawn zombie op die plank
+    const enemy = window.enemies.spawn("zombie", plankTile.x * world.tileSize + world.tileSize/2, plankTile.y * world.tileSize + world.tileSize/2)
 
     console.log("STRUCTURES: plank.spawnzombie geplaatst met enemy", enemy)
     return enemy
