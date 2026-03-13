@@ -1,6 +1,5 @@
 // enemies.js
 import { makeTransparent } from "./textureUtils.js";
-import { itemTextures } from "./main.js";
 
 // ===== Enemy Class =====
 export class Enemy {
@@ -12,20 +11,18 @@ export class Enemy {
     this.hp = data.hp;
     this.speed = data.speed;
     this.damage = data.damage;
-    this.range = data.range || { length: 1 }; // fallback
+    this.range = data.range || { length: 1 };
 
     this.texture = texture;
     this.weaponTexture = weaponTexture;
 
     this.weapon = data.weapon || null;
-    this.attackFunction = data.attackfunction || null; // opgeslagen voor later gebruik
-
     this.dead = false;
     this.attackCooldown = 0;
-    this.attackTime = 1000; // 1 sec cooldown
+    this.attackTime = 1000;
 
-    this.world = world; // reference naar world voor pathfinding
-    this.path = []; // tile path naar speler
+    this.world = world;
+    this.path = [];
     this.tileSize = 32;
   }
 
@@ -37,7 +34,6 @@ export class Enemy {
     const dist = Math.hypot(dx, dy);
     const attackRange = this.range.length * this.tileSize;
 
-    // update path als speler buiten attack range
     if (dist > attackRange) {
       const startTile = this.toTile(this.x, this.y);
       const endTile = this.toTile(player.x, player.y);
@@ -52,12 +48,10 @@ export class Enemy {
 
       this.followPath(deltaTime);
     } else {
-      // aanval
       this.tryAttack(player);
       this.path = [];
     }
 
-    // cooldown afbouwen
     if (this.attackCooldown > 0) this.attackCooldown -= deltaTime;
   }
 
@@ -78,7 +72,7 @@ export class Enemy {
     const dist = Math.hypot(dx, dy);
 
     if (dist < 1) {
-      this.path.shift(); // tile bereikt
+      this.path.shift();
       return;
     }
 
@@ -87,7 +81,7 @@ export class Enemy {
   }
 
   tryAttack(player) {
-    if (!this.canAttack()) return;
+    if (this.attackCooldown > 0) return;
 
     const dx = player.x - this.x;
     const dy = player.y - this.y;
@@ -95,42 +89,28 @@ export class Enemy {
 
     if (dist <= this.range.length * this.tileSize) {
       player.hp = Math.max(0, (player.hp || 10) - this.damage);
-      this.resetCooldown();
+      this.attackCooldown = this.attackTime;
       console.log(`[ENEMY] ${this.type} valt speler aan! Damage: ${this.damage}`);
-      // TODO: gebruik attackFunction als je meerdere aanvalstypes wilt implementeren
     }
-  }
-
-  canAttack() {
-    return this.attackCooldown <= 0;
-  }
-
-  resetCooldown() {
-    this.attackCooldown = this.attackTime;
   }
 
   draw(ctx, camera) {
     if (this.dead) return;
-
-    if (this.texture) {
-      ctx.drawImage(this.texture, this.x - camera.x - 16, this.y - camera.y - 16, 32, 32);
-    }
-    if (this.weaponTexture) {
-      ctx.drawImage(this.weaponTexture, this.x - camera.x + 10, this.y - camera.y - 8, 16, 16);
-    }
+    if (this.texture) ctx.drawImage(this.texture, this.x - camera.x - 16, this.y - camera.y - 16, 32, 32);
+    if (this.weaponTexture) ctx.drawImage(this.weaponTexture, this.x - camera.x + 10, this.y - camera.y - 8, 16, 16);
   }
 
-  // ===== A* Pathfinding =====
   findPath(start, end) {
+    // eenvoudige A* pathfinding
     const openSet = [];
     const closedSet = new Set();
     const cameFrom = {};
-    const key = (t) => t[0] + "," + t[1];
+    const key = (t) => `${t[0]},${t[1]}`;
     const heuristic = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
 
     openSet.push({ tile: start, g: 0, f: heuristic(start, end) });
 
-    while (openSet.length > 0) {
+    while (openSet.length) {
       openSet.sort((a, b) => a.f - b.f);
       const current = openSet.shift();
       const [cx, cy] = current.tile;
@@ -159,9 +139,9 @@ export class Enemy {
         const [nx, ny] = n;
         if (!this.world.isWalkable(nx, ny)) continue;
         if (closedSet.has(key(n))) continue;
+
         const gScore = current.g + 1;
         const fScore = gScore + heuristic(n, end);
-
         const existing = openSet.find((o) => o.tile[0] === nx && o.tile[1] === ny);
         if (existing) {
           if (gScore < existing.g) {
@@ -176,7 +156,7 @@ export class Enemy {
       }
     }
 
-    return []; // geen pad gevonden
+    return [];
   }
 }
 
@@ -186,13 +166,15 @@ export class EnemyManager {
     this.world = world;
     this.enemyTypes = {};
     this.enemyTextures = {};
+    this.weaponTextures = {};
     this.enemies = [];
   }
 
   async load() {
-    const r = await fetch("data/enemys.json");
-    this.enemyTypes = await r.json();
+    const res = await fetch("data/enemys.json");
+    this.enemyTypes = await res.json();
 
+    // laadt alle enemy textures
     for (const type in this.enemyTypes) {
       const texName = this.enemyTypes[type].texture;
       let img = new Image();
@@ -200,6 +182,15 @@ export class EnemyManager {
       await new Promise((res) => (img.onload = res));
       img = await makeTransparent(img);
       this.enemyTextures[type] = img;
+
+      // laad weapon texture als er een is
+      const weapon = this.enemyTypes[type].weapon;
+      if (weapon) {
+        let wImg = new Image();
+        wImg.src = "assets/" + weapon + ".png"; // neem gewoon dezelfde naam als JSON weapon
+        await new Promise((res) => (wImg.onload = res));
+        this.weaponTextures[weapon] = await makeTransparent(wImg);
+      }
     }
 
     console.log("[ENEMIES] Loaded:", Object.keys(this.enemyTypes));
@@ -207,15 +198,11 @@ export class EnemyManager {
 
   spawn(type, x, y) {
     const data = this.enemyTypes[type];
-    if (!data) {
-      console.error("[ENEMIES] Type bestaat niet:", type);
-      return;
-    }
+    if (!data) return console.error("Unknown enemy type:", type);
 
     const tex = this.enemyTextures[type];
-    const weaponTex = itemTextures[data.weapon] || null;
+    const weaponTex = data.weapon ? this.weaponTextures[data.weapon] : null;
 
-    // x, y worden pixel posities
     const enemy = new Enemy(type, x, y, data, tex, weaponTex, this.world);
     this.enemies.push(enemy);
     return enemy;
@@ -240,7 +227,5 @@ export class EnemyManager {
   }
 }
 
-// ===== Singleton =====
-if (!window.enemies) {
-  window.enemies = new EnemyManager(window.world || null);
-}
+// singleton
+if (!window.enemies) window.enemies = new EnemyManager(window.world || null);
