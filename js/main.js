@@ -4,6 +4,10 @@ import { World } from "./world.js";
 import { StructureManager } from "./structures.js";
 import { Combat } from "./combat.js";
 
+const structures = new StructureManager();
+await structures.loadAll(["house.txt","tree.txt"]); // haal alles uit map
+world.structuresManager = structures; // geef mee aan World.js
+
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
