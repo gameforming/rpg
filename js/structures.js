@@ -1,4 +1,3 @@
-// structures.js
 export class StructureManager {
 
   constructor(blocks) {
@@ -25,10 +24,24 @@ export class StructureManager {
         let parsedRow = []
 
         for (let cell of cols) {
-          let parts = cell.split(".")
-          let block = parts[0]
-          let type = parts[1] || "p"
-          parsedRow.push({ block, type })
+          if (cell.startsWith("LT")) {
+            // chest met luck
+            let luck = parseInt(cell.substring(2)) || 1
+            parsedRow.push({ block: "chest", type: "c", luck })
+          }
+          else if (cell.includes(".spawn.")) {
+            // generieke spawn tile
+            let parts = cell.split(".spawn.")
+            let blockName = parts[0]   // bv "plank"
+            let entityType = parts[1]  // bv "zombie"
+            parsedRow.push({ block: blockName, type: "p", spawn: entityType })
+          }
+          else {
+            let parts = cell.split(".")
+            let block = parts[0]
+            let type = parts[1] || "p"
+            parsedRow.push({ block, type })
+          }
         }
 
         grid.push(parsedRow)
@@ -44,7 +57,8 @@ export class StructureManager {
   // laad **alle structures** uit een lijst
   async loadAll() {
     console.log("STRUCTURES: loadAll gestart")
-    let list = ["tree", "house", "plank.spawnzombie"] // plank.spawnzombie toegevoegd
+    // pas hier aan met alle structure namen die je wilt inladen
+    let list = ["tree", "house", "plank.spawnzombie"] // later uitbreidbaar
 
     for (let s of list) {
       await this.loadStructure(s)
@@ -80,44 +94,25 @@ export class StructureManager {
     return this.structures[name]
   }
 
-  // ====== SPECIAL SPAWN FUNCTIES ======
-  // spawn een plank met zombie op x,y
-  spawnPlankZombie(world, wx, wy) {
-    const structure = this.get("plank.spawnzombie")
-    if (!structure) {
-      console.warn("STRUCTURES: plank.spawnzombie niet geladen")
-      return null
-    }
+  // ====== generieke spawn functie per tile ======
+  // gebruikt door world.js wanneer een structure wordt geplaatst
+  handleSpawns(world, x, y, grid) {
+    const height = grid.length
+    const width = grid[0].length
 
-    let width = structure[0].length
-    let height = structure.length
-
-    // zet structure in world
-    world.placeStructure(structure, wx, wy)
-
-    // vind een plank-tile binnen de structure (bijvoorbeeld type "p")
-    let plankTile = null
     for (let sy = 0; sy < height; sy++) {
       for (let sx = 0; sx < width; sx++) {
-        const cell = structure[sy][sx]
-        if (cell.block === "plank") {
-          plankTile = { x: wx + sx, y: wy + sy }
-          break
+        let tile = grid[sy][sx]
+        if (tile && tile.spawn) {
+          const wx = x + sx
+          const wy = y + sy
+          if (window.enemies) {
+            window.enemies.spawn(tile.spawn, wx, wy)
+            console.log(`STRUCTURES: enemy ${tile.spawn} gespawned op ${wx},${wy}`)
+          }
         }
       }
-      if (plankTile) break
     }
-
-    if (!plankTile) {
-      console.warn("STRUCTURES: geen plank tile gevonden voor zombie spawn")
-      return null
-    }
-
-    // spawn zombie op die plank
-    const enemy = window.enemies.spawn("zombie", plankTile.x * world.tileSize + world.tileSize/2, plankTile.y * world.tileSize + world.tileSize/2)
-
-    console.log("STRUCTURES: plank.spawnzombie geplaatst met enemy", enemy)
-    return enemy
   }
 
 }
