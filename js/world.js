@@ -91,6 +91,11 @@ export class World {
     }
 
     this.placeStructure(structure, worldX, worldY)
+
+    // ==== NIEUW: spawn enemies in structure ====
+    if (window.structures) {
+      window.structures.handleSpawns(this, worldX, worldY, structure)
+    }
   }
 
   checkOverlap(x, y, w, h) {
