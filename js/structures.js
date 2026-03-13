@@ -1,3 +1,13 @@
+// structures.js
+
+export const structuresList = [
+  // [structureName, spawnChanceInPercent]
+  ["tree", 30],     // 30% kans per chunk
+  ["house", 10],    // 10% kans
+   
+]
+
+// StructureManager blijft zoals je had, met FLEXIBELE SPAWN parsing
 export class StructureManager {
 
   constructor(blocks) {
@@ -24,13 +34,15 @@ export class StructureManager {
         let parsedRow = []
 
         for (let cell of cols) {
+          cell = cell.trim()
           let parts = cell.split(".")
           let block = parts[0]
           let type = parts[1] || "p"
 
-          // special spawn tile
-          if (block.startsWith("spawn")) {
-            parsedRow.push({ spawn: block.split(".")[1] }) // bv spawn.zombie -> {spawn:"zombie"}
+          // FLEXIBELE SPAWN PARSING
+          if (cell.includes("spawn.")) {
+            let entityType = parts[parts.length - 1]  // altijd laatste deel
+            parsedRow.push({ spawn: entityType })
           } else {
             parsedRow.push({ block, type })
           }
@@ -46,15 +58,12 @@ export class StructureManager {
     }
   }
 
-  // laad **alle structures** uit een lijst
+  // laad **alle structures** uit de lijst
   async loadAll() {
     console.log("STRUCTURES: loadAll gestart")
-    let list = ["tree", "house", "plank.spawnzombie"] // uitbreidbaar
-
-    for (let s of list) {
-      await this.loadStructure(s)
+    for (let [name] of structuresList) {
+      await this.loadStructure(name)
     }
-
     console.log("STRUCTURES: loadAll klaar, structures:", Object.keys(this.structures))
   }
 
@@ -65,13 +74,20 @@ export class StructureManager {
     console.log("STRUCTURES: reloadAll klaar")
   }
 
+  // kies een random structure op basis van spawnChance
   getRandom() {
-    let keys = Object.keys(this.structures)
-    if (keys.length === 0) {
-      console.warn("STRUCTURES: geen structures beschikbaar")
-      return null
+    let totalWeight = structuresList.reduce((sum, s) => sum + s[1], 0)
+    let rnd = Math.random() * totalWeight
+    let accumulated = 0
+
+    for (let [name, chance] of structuresList) {
+      accumulated += chance
+      if (rnd <= accumulated) {
+        return this.structures[name] || null
+      }
     }
-    return this.structures[keys[Math.floor(Math.random() * keys.length)]]
+
+    return this.structures[structuresList[0][0]] || null
   }
 
   get(name) {
@@ -82,8 +98,6 @@ export class StructureManager {
     return this.structures[name]
   }
 
-  // ======== SPECIAL SPAWN HANDLER ========
-  // wordt vanuit World.spawnStructure aangeroepen
   handleSpawns(world, worldX, worldY, structure) {
     let h = structure.length
     let w = structure[0].length
