@@ -71,7 +71,7 @@ export class Combat {
     };
 
     // damage toepassen op alle enemies
-    for(let e of enemiesManager.enemies){
+   for(let e of enemiesManager){
       if(e.dead) continue;
       if(e.x > attackRect.x && e.x < attackRect.x + attackRect.w &&
          e.y > attackRect.y && e.y < attackRect.y + attackRect.h){
