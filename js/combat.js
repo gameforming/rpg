@@ -1,23 +1,30 @@
 // combat.js
 export class Combat {
   constructor(player, world){
-    this.player = player;       // speler object
-    this.world = world;         // world object
-    this.level = 1;             // start level
-    this.xp = 0;                // start XP
-    this.maxXp = 100;           // start max XP
-    this.lastAttack = 0;
-    this.attackCooldown = 500;  // halve seconde cooldown
-    this.gold = 0; // ⭐ NIEUW
+    this.player = player;
+    this.world = world;
 
-    // HP initialisatie
+    // Progressie
+    this.level = 1;
+    this.xp = 0;
+    this.maxXp = 100;
+
+    // Combat
+    this.lastAttack = 0;
+    this.attackCooldown = 500;
+
+    // Currency
+    this.gold = 0;
+
+    // Player HP
     this.player.maxHp = this.player.maxHp || 100;
     this.player.hp = this.player.hp || this.player.maxHp;
   }
 
-  // XP toevoegen en levels updaten
+  // XP systeem
   gainXp(amount){
     this.xp += amount;
+
     while(this.xp >= this.maxXp){
       this.xp -= this.maxXp;
       this.levelUp();
@@ -26,8 +33,11 @@ export class Combat {
 
   levelUp(){
     this.level++;
+
+    // XP scaling
     this.maxXp = Math.floor(this.maxXp * 1.5);
-    // bij level up een beetje HP herstellen
+
+    // HP scaling
     this.player.maxHp = Math.floor(this.player.maxHp * 1.1);
     this.player.hp = this.player.maxHp;
   }
@@ -36,14 +46,19 @@ export class Combat {
     return time - this.lastAttack >= this.attackCooldown;
   }
 
-  // Spatie-triggered aanval
-  attack(enemiesManager, weapon, mouseX, mouseY, camera, time, input){
-    if(!this.player.keys[" "] && !this.player.keys["space"] && !this.player.keys["spacebar"]) return;
+  // Attack (SPACE)
+  attack(enemies, weapon, mouseX, mouseY, camera, time){
+
+    if(!this.player.keys[" "] &&
+       !this.player.keys["space"] &&
+       !this.player.keys["spacebar"]) return;
+
     if(!weapon || !this.canAttack(time)) return;
+    if(!Array.isArray(enemies)) return;
 
     this.lastAttack = time;
 
-    // start swing animatie
+    // weapon swing animatie
     if(!this.player.weaponSwinging){
       this.player.weaponSwinging = true;
       this.player.weaponSwing = 0;
@@ -54,16 +69,17 @@ export class Combat {
 
     // weapon range
     const range = weapon.range || { width:1, length:1 };
+
     const attackWidth = range.width * this.world.tileSize;
     const attackLength = range.length * this.world.tileSize;
 
-    // richting van de muis
+    // richting naar muis
     const dx = mouseX + camera.x - wx;
     const dy = mouseY + camera.y - wy;
     const angle = Math.atan2(dy, dx);
 
-    // simpele rechthoek voor collision
     const halfW = attackWidth / 2;
+
     const attackRect = {
       x: wx + Math.cos(angle) * attackLength - halfW,
       y: wy + Math.sin(angle) * attackLength - halfW,
@@ -71,15 +87,31 @@ export class Combat {
       h: attackWidth
     };
 
-    // damage toepassen op alle enemies
-   for(let e of enemiesManager){
-      if(e.dead) continue;
-      if(e.x > attackRect.x && e.x < attackRect.x + attackRect.w &&
-         e.y > attackRect.y && e.y < attackRect.y + attackRect.h){
+    // damage toepassen
+    for(let e of enemies){
+
+      if(!e || e.dead) continue;
+
+      if(
+        e.x > attackRect.x &&
+        e.x < attackRect.x + attackRect.w &&
+        e.y > attackRect.y &&
+        e.y < attackRect.y + attackRect.h
+      ){
+
         e.hp -= weapon.damage;
+
+        // enemy death
         if(e.hp <= 0){
+
           e.dead = true;
-          this.gainXp(10); // XP per kill
+
+          // XP gain
+          this.gainXp(10);
+
+          // GOLD DROP (uit enemy JSON)
+          const dropGold = e.gold || 0;
+          this.gold += dropGold;
         }
       }
     }
@@ -87,39 +119,61 @@ export class Combat {
 
   // UI tekenen
   drawUI(ctx, canvas){
-    // HP linksboven
+
+    // HP BAR
     const hpBarWidth = 200;
     const hp = this.player.hp;
     const maxHp = this.player.maxHp;
 
     ctx.fillStyle = "black";
-    ctx.fillRect(20, 20, hpBarWidth, 20);
+    ctx.fillRect(20,20,hpBarWidth,20);
+
     ctx.fillStyle = "red";
-    ctx.fillRect(20, 20, (hp/maxHp) * hpBarWidth, 20);
+    ctx.fillRect(20,20,(hp/maxHp)*hpBarWidth,20);
+
     ctx.strokeStyle = "white";
     ctx.lineWidth = 2;
-    ctx.strokeRect(20, 20, hpBarWidth, 20);
+    ctx.strokeRect(20,20,hpBarWidth,20);
 
     ctx.fillStyle = "white";
     ctx.font = "16px Arial";
-    ctx.fillText(`HP: ${hp}/${maxHp}`, 25, 35);
+    ctx.fillText(`HP: ${hp}/${maxHp}`,25,35);
 
-    // Level + XP rechtsboven
+    // XP BAR
     const xpBarWidth = 150;
     const xPos = canvas.width - xpBarWidth - 20;
 
     ctx.fillStyle = "black";
-    ctx.fillRect(xPos, 20, xpBarWidth, 20);
+    ctx.fillRect(xPos,20,xpBarWidth,20);
+
     ctx.fillStyle = "green";
-    ctx.fillRect(xPos, 20, (this.xp/this.maxXp) * xpBarWidth, 20);
+    ctx.fillRect(xPos,20,(this.xp/this.maxXp)*xpBarWidth,20);
+
     ctx.strokeStyle = "white";
-    ctx.strokeRect(xPos, 20, xpBarWidth, 20);
+    ctx.strokeRect(xPos,20,xpBarWidth,20);
 
     ctx.fillStyle = "white";
     ctx.font = "16px Arial";
-    ctx.fillText(`LV ${this.level}`, xPos, 15);
+    ctx.fillText(`LV ${this.level}`,xPos,15);
+
+    // GOLD UI (boven midden)
+    const goldWidth = 200;
+
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(canvas.width/2 - goldWidth/2, 10, goldWidth, 30);
+
+    ctx.strokeStyle = "white";
+    ctx.strokeRect(canvas.width/2 - goldWidth/2, 10, goldWidth, 30);
+
+    ctx.fillStyle = "gold";
+    ctx.font = "18px Arial";
+    ctx.textAlign = "center";
+
+    ctx.fillText(`Gold: ${this.gold}`, canvas.width/2, 30);
+
+    ctx.textAlign = "left";
   }
 }
 
-// maak beschikbaar voor main.js
+// beschikbaar maken
 window.combat = null;
