@@ -5,7 +5,7 @@
     "speed": 0.6,
     "damage": 3,
     "range": { "length": 5 },
-    "weapon": "stick"
+    "weapon": "stick",
     "gold": 7
   }
 }
