@@ -46,40 +46,23 @@ export class Combat {
     return time - this.lastAttack >= this.attackCooldown;
   }
 
-  // Attack (SPACE)
-  attack(enemies, weapon, mouseX, mouseY, camera, time){
-
-    if(!this.player.keys[" "] &&
-       !this.player.keys["space"] &&
-       !this.player.keys["spacebar"]) return;
-
-    if(!weapon || !this.canAttack(time)) return;
-    if(!Array.isArray(enemies)) return;
+  attack(weapon, mouseX, mouseY, camera, time, input){
+    if (!weapon || !this.canAttack(time)) return;
 
     this.lastAttack = time;
-
-    // weapon swing animatie
-    if(!this.player.weaponSwinging){
-      this.player.weaponSwinging = true;
-      this.player.weaponSwing = 0;
-    }
 
     const wx = this.player.x;
     const wy = this.player.y;
 
-    // weapon range
-    const range = weapon.range || { width:1, length:1 };
-
+    const range = weapon.range || { width: 1, length: 1 };
     const attackWidth = range.width * this.world.tileSize;
     const attackLength = range.length * this.world.tileSize;
 
-    // richting naar muis
     const dx = mouseX + camera.x - wx;
     const dy = mouseY + camera.y - wy;
     const angle = Math.atan2(dy, dx);
 
     const halfW = attackWidth / 2;
-
     const attackRect = {
       x: wx + Math.cos(angle) * attackLength - halfW,
       y: wy + Math.sin(angle) * attackLength - halfW,
@@ -87,21 +70,23 @@ export class Combat {
       h: attackWidth
     };
 
-    // damage toepassen
-for (let e of enemiesManager.enemies) {
-    if (e.dead) continue;
-    if (e.x > attackRect.x && e.x < attackRect.x + attackRect.w &&
-        e.y > attackRect.y && e.y < attackRect.y + attackRect.h) {
-        e.hp -= weapon.damage;
-        if (e.hp <= 0) {
-            e.dead = true;
-            this.gainXp(10); // XP per kill
-            // ⭐ Voeg hier ook gold drop toe ok
-            this.gold += e.gold || 0;
+    for (let e of this.enemiesManager.enemies) { // <-- gebruik this.enemiesManager
+        if (e.dead) continue;
+        if (e.x > attackRect.x && e.x < attackRect.x + attackRect.w &&
+            e.y > attackRect.y && e.y < attackRect.y + attackRect.h) {
+            e.hp -= weapon.damage;
+            if (e.hp <= 0) {
+                e.dead = true;
+                this.gainXp(10);
+
+
+      const goldDropped = this.enemiesManager.enemyTypes[e.type]?.gold || 1;
+      this.gold += goldDropped;
+      console.log(`[COMBAT] ${e.type} dood, gold +${goldDropped}`);
+            }
         }
     }
 }
-  }
 
   // UI tekenen
   drawUI(ctx, canvas){
