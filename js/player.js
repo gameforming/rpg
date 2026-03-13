@@ -15,7 +15,23 @@ this.weaponSwinging = false
 this.keys = {}
 
 window.addEventListener("keydown", e=>{
-this.keys[e.key.toLowerCase()] = true
+
+const key = e.key.toLowerCase()
+
+this.keys[key] = true
+
+// aanval met spatie
+if(key === " " || key === "space" || key === "spacebar"){
+
+if(!this.weaponSwinging){
+
+this.weaponSwinging = true
+this.weaponSwing = 0
+
+}
+
+}
+
 })
 
 window.addEventListener("keyup", e=>{
@@ -101,10 +117,10 @@ if(this.weaponSwinging){
 angle += Math.sin(this.weaponSwing) * 0.8
 }
 
-// basis afstand van speler
+// basis afstand
 let offset = 20
 
-// naar voren en terug beweging
+// swing naar voren en terug
 if(this.weaponSwinging){
 offset += Math.sin(this.weaponSwing) * 10
 }
@@ -119,12 +135,12 @@ wx - camera.x,
 wy - camera.y
 )
 
-// correctie omdat sword sprite 45° gedraaid is getekend
+// correctie omdat sword sprite 45° gedraaid is
 ctx.rotate(angle + Math.PI / 4)
 
 ctx.globalAlpha = this.weaponSwinging ? 1 : 0.6
 
-ctx.drawImage(texture, -16, -16, 32, 32)
+ctx.drawImage(texture,-16,-16,32,32)
 
 ctx.restore()
 
