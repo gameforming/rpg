@@ -1,137 +1,453 @@
-// structures.js
-// Beheer van structures en spawns
+// enemies.js
+import { makeTransparent } from "./textureUtils.js";
+import { itemTextures } from "./main.js";
 
-export const structuresList = [
-  // [structureName, spawnChancePerChunk]
-  ["tree", 60],
-  ["house", 10],
-  
-];
 
-export class StructureManager {
-  constructor(blocks, enemyManager) {
-    this.blocks = blocks;
-    this.structures = {}; // { name: grid }
-    this.enemyManager = enemyManager; // gebruik EnemyManager voor spawns
+// ===== Enemy Class =====
+export class Enemy {
+
+  constructor(type, x, y, data, texture, weaponTexture, world) {
+
+    this.type = type;
+
+    this.x = x;
+    this.y = y;
+
+    this.hp = data.hp;
+    this.speed = data.speed;
+    this.damage = data.damage;
+    this.range = data.range;
+
+    this.texture = texture;
+    this.weaponTexture = weaponTexture;
+
+    this.weapon = data.weapon;
+    this.attackFunction = data.attackfunction || null;
+
+    this.dead = false;
+
+    this.attackCooldown = 0;
+    this.attackTime = 1000;
+
+    this.world = world;
+
+    this.path = [];
+
+    this.tileSize = 32;
   }
 
-  // laad een enkele structure uit structures/<name>.txt
-  async loadStructure(name) {
-    try {
-      console.log("STRUCTURES: loading structure:", name);
-      let res = await fetch("structures/" + name + ".txt?cache=" + Date.now());
-      if (!res.ok) {
-        console.error("STRUCTURES: file niet gevonden:", name);
-        return;
+
+
+  update(player, deltaTime) {
+
+    if (this.dead) return;
+
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+
+    const dist = Math.hypot(dx, dy);
+
+    const attackRange = this.range.length * this.tileSize;
+
+
+    if (dist > attackRange) {
+
+      const startTile = this.toTile(this.x, this.y);
+      const endTile = this.toTile(player.x, player.y);
+
+      if (
+        this.path.length === 0 ||
+        this.path[this.path.length - 1][0] !== endTile[0] ||
+        this.path[this.path.length - 1][1] !== endTile[1]
+      ) {
+
+        this.path = this.findPath(startTile, endTile);
+
       }
 
-      const text = await res.text();
-      const rows = text.trim().split("\n");
-      const grid = [];
+      this.followPath(deltaTime);
 
-      for (let row of rows) {
-        const cols = row.split(",");
-        const parsedRow = [];
+    } else {
 
-        for (let cell of cols) {
-          cell = cell.trim();
-          const parts = cell.split(".");
-          const block = parts[0];
-          const type = parts[1] || "p";
+      this.tryAttack(player);
+      this.path = [];
 
-          // FLEXIBELE SPAWN PARSING
-          if (cell.includes("spawn.")) {
-            const entityType = parts[parts.length - 1];
-            parsedRow.push({ spawn: entityType });
-          } else {
-            parsedRow.push({ block, type });
-          }
+    }
+
+
+    if (this.attackCooldown > 0)
+      this.attackCooldown -= deltaTime;
+
+  }
+
+
+
+  toTile(x, y) {
+
+    return [
+      Math.floor(x / this.tileSize),
+      Math.floor(y / this.tileSize)
+    ];
+
+  }
+
+
+
+  toPixel(tile) {
+
+    return [
+      tile[0] * this.tileSize + this.tileSize / 2,
+      tile[1] * this.tileSize + this.tileSize / 2
+    ];
+
+  }
+
+
+
+  followPath(deltaTime) {
+
+    if (this.path.length === 0) return;
+
+    const [tx, ty] = this.path[0];
+
+    const [px, py] = this.toPixel([tx, ty]);
+
+    const dx = px - this.x;
+    const dy = py - this.y;
+
+    const dist = Math.hypot(dx, dy);
+
+    if (dist < 1) {
+
+      this.path.shift();
+      return;
+
+    }
+
+    this.x += (dx / dist) * this.speed;
+    this.y += (dy / dist) * this.speed;
+
+  }
+
+
+
+  tryAttack(player) {
+
+    if (!this.canAttack()) return;
+
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+
+    const dist = Math.hypot(dx, dy);
+
+    if (dist <= this.range.length * this.tileSize) {
+
+      player.hp = Math.max(0, (player.hp || 10) - this.damage);
+
+      this.resetCooldown();
+
+      console.log(`[ENEMY] ${this.type} valt speler aan! Damage: ${this.damage}`);
+
+    }
+
+  }
+
+
+
+  canAttack() {
+
+    return this.attackCooldown <= 0;
+
+  }
+
+
+
+  resetCooldown() {
+
+    this.attackCooldown = this.attackTime;
+
+  }
+
+
+
+  draw(ctx, camera) {
+
+    if (this.dead) return;
+
+    if (this.texture) {
+
+      ctx.drawImage(
+        this.texture,
+        this.x - camera.x - 16,
+        this.y - camera.y - 16,
+        32,
+        32
+      );
+
+    }
+
+    if (this.weaponTexture) {
+
+      ctx.drawImage(
+        this.weaponTexture,
+        this.x - camera.x + 10,
+        this.y - camera.y - 8,
+        16,
+        16
+      );
+
+    }
+
+  }
+
+
+
+  // ===== A* Pathfinding =====
+  findPath(start, end) {
+
+    const openSet = [];
+    const closedSet = new Set();
+    const cameFrom = {};
+
+    const key = (t) => t[0] + "," + t[1];
+
+    const heuristic = (a, b) =>
+      Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
+
+
+    openSet.push({
+      tile: start,
+      g: 0,
+      f: heuristic(start, end)
+    });
+
+
+    while (openSet.length > 0) {
+
+      openSet.sort((a, b) => a.f - b.f);
+
+      const current = openSet.shift();
+
+      const [cx, cy] = current.tile;
+
+
+      if (cx === end[0] && cy === end[1]) {
+
+        const path = [];
+
+        let c = key(end);
+
+        while (c !== key(start)) {
+
+          const t = cameFrom[c];
+
+          path.unshift(t);
+
+          c = key(t);
+
         }
 
-        grid.push(parsedRow);
+        return path;
+
       }
 
-      this.structures[name] = grid;
-      console.log("STRUCTURES: loaded structure:", name);
-    } catch (err) {
-      console.error("STRUCTURES: fout bij laden", name, err);
-    }
-  }
 
-  // laad alle structures in de lijst
-  async loadAll() {
-    console.log("STRUCTURES: loadAll gestart");
-    for (let [name] of structuresList) {
-      await this.loadStructure(name);
-    }
-    console.log("STRUCTURES: loadAll klaar, structures:", Object.keys(this.structures));
-  }
+      closedSet.add(key(current.tile));
 
-  async reloadAll() {
-    console.log("STRUCTURES: reloadAll gestart");
-    this.structures = {};
-    await this.loadAll();
-    console.log("STRUCTURES: reloadAll klaar");
-  }
 
-  // kies een random structure op basis van spawnChance
-  getRandom() {
-    const totalWeight = structuresList.reduce((sum, s) => sum + s[1], 0);
-    let rnd = Math.random() * totalWeight;
-    let accumulated = 0;
+      const neighbors = [
 
-    for (let [name, chance] of structuresList) {
-      accumulated += chance;
-      if (rnd <= accumulated) {
-        return this.structures[name] || null;
-      }
-    }
+        [cx + 1, cy],
+        [cx - 1, cy],
+        [cx, cy + 1],
+        [cx, cy - 1]
 
-    return this.structures[structuresList[0][0]] || null;
-  }
+      ];
 
-  get(name) {
-    if (!this.structures[name]) {
-      console.warn("STRUCTURES: get() niet gevonden", name);
-      return null;
-    }
-    return this.structures[name];
-  }
 
-  // ===== SPECIAL SPAWN HANDLER =====
-  // world = world instance, worldX/Y = positie in tiles
-  handleSpawns(world, worldX, worldY, structure) {
-    const h = structure.length;
-    const w = structure[0].length;
+      for (let n of neighbors) {
 
-    for (let sy = 0; sy < h; sy++) {
-      for (let sx = 0; sx < w; sx++) {
-        const cell = structure[sy][sx];
+        const [nx, ny] = n;
 
-        if (cell && cell.spawn) {
-          const enemyType = cell.spawn;
+        if (!this.world.isWalkable(nx, ny)) continue;
 
-          try {
-            // gebruik EnemyManager om een enemy te spawnen
-            const enemy = this.enemyManager.spawn(
-              enemyType,
-              (worldX + sx) * 32, // pixelpositie
-              (worldY + sy) * 32
-            );
+        if (closedSet.has(key(n))) continue;
 
-            if (!enemy) continue;
+        const gScore = current.g + 1;
 
-            // vervang de tile door een walkable tile zodat enemy niet vastzit
-            const tile = world.getStructureTile(worldX + sx, worldY + sy);
-            if (tile) {
-              tile.block = "planks";
-              tile.type = "p";
-            }
-          } catch (err) {
-            console.warn("StructureManager: spawn failed for type:", enemyType, err);
+        const fScore = gScore + heuristic(n, end);
+
+
+        const existing = openSet.find(
+          (o) => o.tile[0] === nx && o.tile[1] === ny
+        );
+
+
+        if (existing) {
+
+          if (gScore < existing.g) {
+
+            existing.g = gScore;
+            existing.f = fScore;
+
+            cameFrom[key(n)] = current.tile;
+
           }
+
+        } else {
+
+          openSet.push({
+            tile: n,
+            g: gScore,
+            f: fScore
+          });
+
+          cameFrom[key(n)] = current.tile;
+
         }
+
       }
+
     }
+
+    return [];
+
   }
+
+}
+
+
+
+// ===== EnemyManager =====
+export class EnemyManager {
+
+  constructor(world) {
+
+    this.world = world;
+
+    this.enemyTypes = {};
+
+    this.enemyTextures = {};
+
+    this.enemies = [];
+
+  }
+
+
+
+  async load() {
+
+    let r = await fetch("data/enemys.json");
+
+    this.enemyTypes = await r.json();
+
+
+    for (let type in this.enemyTypes) {
+
+      const texName = this.enemyTypes[type].texture;
+
+      let img = new Image();
+
+      img.src = "assets/" + texName;
+
+      await new Promise((res) => (img.onload = res));
+
+      img = await makeTransparent(img);
+
+      this.enemyTextures[type] = img;
+
+    }
+
+    console.log("[ENEMIES] Loaded:", Object.keys(this.enemyTypes));
+
+  }
+
+
+
+  spawn(type, x, y) {
+
+    const data = this.enemyTypes[type];
+
+    if (!data) {
+
+      console.error("[ENEMIES] Type bestaat niet:", type);
+
+      return;
+
+    }
+
+    const tex = this.enemyTextures[type];
+
+    const weaponTex = itemTextures[data.weapon] || null;
+
+
+    // FIX: tile → pixel
+    const px = x * 32 + 16;
+    const py = y * 32 + 16;
+
+
+    const enemy = new Enemy(
+      type,
+      px,
+      py,
+      data,
+      tex,
+      weaponTex,
+      this.world
+    );
+
+
+    this.enemies.push(enemy);
+
+    return enemy;
+
+  }
+
+
+
+  update(player, deltaTime) {
+
+    for (let e of this.enemies)
+      e.update(player, deltaTime);
+
+    this.enemies =
+      this.enemies.filter((e) => !e.dead);
+
+  }
+
+
+
+  draw(ctx, camera) {
+
+    for (let e of this.enemies)
+      e.draw(ctx, camera);
+
+  }
+
+
+
+  spawnRandom(type, attempts = 100) {
+
+    for (let i = 0; i < attempts; i++) {
+
+      const wx = Math.floor(Math.random() * 100);
+
+      const wy = Math.floor(Math.random() * 100);
+
+      if (this.world.isWalkable(wx, wy))
+        return this.spawn(type, wx, wy);
+
+    }
+
+    return null;
+
+  }
+
+}
+
+
+
+// ===== Singleton (veilig gemaakt) =====
+if (!window.enemies) {
+  window.enemies = new EnemyManager(window.world || null);
 }
