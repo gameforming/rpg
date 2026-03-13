@@ -30,7 +30,7 @@ export class Combat {
   // Spatie-triggered aanval
   attack(enemies, weapon, mouseX, mouseY, camera, time, input){
     // check input: alleen spatie start de attack
-    if(!input.keys[" "] && !input.keys["space"] && !input.keys["spacebar"]) return
+    if(!this.player.keys[" "] && !this.player.keys["space"] && !this.player.keys["spacebar"]) return
     if(!weapon || !this.canAttack(time)) return
 
     this.lastAttack = time
