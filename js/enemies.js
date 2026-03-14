@@ -195,6 +195,39 @@ export class EnemyManager {
 
     console.log("[ENEMIES] Loaded:", Object.keys(this.enemyTypes));
   }
+  spawn(type, tileX, tileY, pathfinding = false) {
+
+    if (!this.types[type]) {
+        console.warn("Enemy type bestaat niet:", type);
+        return;
+    }
+
+    const data = this.types[type];
+
+    const enemy = {
+        type: type,
+
+        x: tileX * this.world.tileSize,
+        y: tileY * this.world.tileSize,
+
+        hp: data.hp,
+        maxHp: data.hp,
+
+        speed: data.speed,
+        damage: data.damage,
+
+        range: data.range,
+
+        texture: this.textures[data.texture],
+
+        pathfinding: pathfinding,
+
+        dead: false
+    };
+
+    this.enemies.push(enemy);
+
+}
 
   spawn(type, x, y) {
     const data = this.enemyTypes[type];
