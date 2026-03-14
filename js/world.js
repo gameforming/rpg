@@ -93,7 +93,7 @@ export class World {
 
     // FIX: world doorgeven i.p.v enemyManager
     if (window.structures && window.structures.handleSpawns) {
-      window.structures.handleSpawns(this, worldX, worldY, structure)
+      window.structures.handleSpawns(this.enemyManager, worldX, worldY, structure)
     }
   }
 
