@@ -91,7 +91,7 @@ export class World {
 
     this.placeStructure(structure, worldX, worldY)
 
-    // FIX: world doorgeven i.p.v enemyManager
+    // FIX: EnemyManager gebruiken voor spawn tiles
     if (window.structures && window.structures.handleSpawns) {
       window.structures.handleSpawns(this.enemyManager, worldX, worldY, structure)
     }
@@ -130,9 +130,7 @@ export class World {
             continue
           }
 
-          // ===== NIEUWE PARSING =====
-          // planks.spawn.zombie.p
-
+          // parsing spawn tiles
           let parts = cell.split(".")
 
           if (parts.includes("spawn")) {
@@ -169,7 +167,9 @@ export class World {
       let sx = wx - s.x
       let sy = wy - s.y
       if (sx >= 0 && sy >= 0 && sx < s.w && sy < s.h) {
-        return s.grid[sy][sx]
+        let tile = s.grid[sy][sx]
+        if (tile.spawn) return null // spawn tiles niet zichtbaar
+        return tile
       }
     }
     return null
@@ -193,8 +193,7 @@ export class World {
   }
 
   getTile(wx, wy) {
-    let structureTile = this.getStructureTile(wx, wy)
-    return structureTile || this.getBaseTile(wx, wy)
+    return this.getStructureTile(wx, wy) || this.getBaseTile(wx, wy)
   }
 
   isWalkable(wx, wy) {
@@ -204,8 +203,6 @@ export class World {
   }
 
   spawnEnemy(type = "zombie", x = null, y = null) {
-
-    // gebruik EnemyManager als die bestaat
     if (this.enemyManager) {
       return this.enemyManager.spawn(type, x, y)
     }
@@ -239,12 +236,12 @@ export class World {
   }
 
   draw(ctx, camera) {
-
     let startX = Math.floor(camera.x / this.tileSize) - 2
     let startY = Math.floor(camera.y / this.tileSize) - 2
     let endX = startX + Math.ceil(this.canvas.width / this.tileSize) + 4
     let endY = startY + Math.ceil(this.canvas.height / this.tileSize) + 4
 
+    // base tiles
     for (let y = startY; y < endY; y++) {
       for (let x = startX; x < endX; x++) {
         let base = this.getBaseTile(x, y)
@@ -254,19 +251,18 @@ export class World {
       }
     }
 
+    // structures
     for (let y = startY; y < endY; y++) {
       for (let x = startX; x < endX; x++) {
-        let structureTile = this.getStructureTile(x, y)
-        if (!structureTile) continue
-        if (structureTile.spawn) continue
-
-        let block = this.blocks[structureTile.block]
+        let st = this.getStructureTile(x, y)
+        if (!st) continue
+        let block = this.blocks[st.block]
         let tex = this.textures[block.texture]
-
         ctx.drawImage(tex, x * this.tileSize - camera.x, y * this.tileSize - camera.y, this.tileSize, this.tileSize)
       }
     }
 
+    // world-enemies
     for (let enemy of this.enemies) {
       if (enemy.dead) continue
       ctx.fillStyle = "green"
@@ -278,10 +274,20 @@ export class World {
       )
     }
 
+    // EnemyManager-enemies
     if (this.enemyManager) {
       for (let enemy of this.enemyManager.enemies) {
         if (enemy.dead) continue
-        enemy.draw(ctx, camera)
+        if (enemy.draw) enemy.draw(ctx, camera)
+        else {
+          ctx.fillStyle = "red"
+          ctx.fillRect(
+            enemy.x * this.tileSize - camera.x - this.tileSize / 2,
+            enemy.y * this.tileSize - camera.y - this.tileSize / 2,
+            this.tileSize,
+            this.tileSize
+          )
+        }
       }
     }
   }
