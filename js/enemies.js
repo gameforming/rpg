@@ -14,9 +14,11 @@ export class Enemy {
     this.damage = data.damage
     this.range = data.range || { length: 1 }
 
-    this.aggroRange = 10 * this.tileSize; // zombies reageren pas binnen 10 tiles
+    
     this.pathCooldown = 0;
     this.pathInterval = 500; // pathfinding elke 0.5s
+    this.aggroRange = 10 * this.tileSize;
+
 
     this.texture = texture
     this.weaponTexture = weaponTexture
