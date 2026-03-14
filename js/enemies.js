@@ -14,6 +14,10 @@ export class Enemy {
     this.damage = data.damage
     this.range = data.range || { length: 1 }
 
+    this.aggroRange = 10 * this.tileSize; // zombies reageren pas binnen 10 tiles
+    this.pathCooldown = 0;
+    this.pathInterval = 500; // pathfinding elke 0.5s
+
     this.texture = texture
     this.weaponTexture = weaponTexture
     this.weapon = data.weapon || null
@@ -27,33 +31,45 @@ export class Enemy {
     this.tileSize = 32
   }
 
-  update(player, deltaTime) {
-    if (this.dead) return
+  update(player, deltaTime){
 
-    const dx = player.x - this.x
-    const dy = player.y - this.y
-    const dist = Math.hypot(dx, dy)
-    const attackRange = this.range.length * this.tileSize
+  if (this.dead) return;
 
-    if (dist > attackRange) {
-      const startTile = this.toTile(this.x, this.y)
-      const endTile = this.toTile(player.x, player.y)
+  const dx = player.x - this.x;
+  const dy = player.y - this.y;
+  const dist = Math.hypot(dx, dy);
 
-      if (
-        this.path.length === 0 ||
-        this.path[this.path.length - 1][0] !== endTile[0] ||
-        this.path[this.path.length - 1][1] !== endTile[1]
-      ) {
-        this.path = this.findPath(startTile, endTile)
-      }
+  const attackRange = this.range.length * this.tileSize;
 
-      this.followPath(deltaTime)
-    } else {
-      this.tryAttack(player)
-      this.path = []
+  // geen aggro → niks doen
+  if (dist > this.aggroRange) return;
+
+  // pathfinding cooldown
+  this.pathCooldown -= deltaTime;
+
+  if (dist > attackRange){
+
+    if (this.pathCooldown <= 0){
+
+      const startTile = this.toTile(this.x, this.y);
+      const endTile = this.toTile(player.x, player.y);
+
+      this.path = this.findPath(startTile, endTile);
+
+      this.pathCooldown = this.pathInterval;
     }
 
-    if (this.attackCooldown > 0) this.attackCooldown -= deltaTime
+    this.followPath(deltaTime);
+
+  } else {
+
+    this.tryAttack(player);
+    this.path = [];
+
+  }
+
+  if (this.attackCooldown > 0)
+    this.attackCooldown -= deltaTime;
   }
 
   toTile(x, y) {
@@ -64,22 +80,28 @@ export class Enemy {
     return [tile[0] * this.tileSize + this.tileSize / 2, tile[1] * this.tileSize + this.tileSize / 2]
   }
 
-  followPath(deltaTime) {
-    if (this.path.length === 0) return
-    const [tx, ty] = this.path[0]
-    const [px, py] = this.toPixel([tx, ty])
-    const dx = px - this.x
-    const dy = py - this.y
-    const dist = Math.hypot(dx, dy)
-    if (dist < 0.1) {
-      this.path.shift()
-      return
-    }
-    // pixel movement met deltaTime
-    this.x += (dx / dist) * this.speed * deltaTime
-    this.y += (dy / dist) * this.speed * deltaTime
+  followPath(deltaTime){
+
+  if (this.path.length === 0) return;
+
+  const [tx, ty] = this.path[0];
+  const [px, py] = this.toPixel([tx, ty]);
+
+  const dx = px - this.x;
+  const dy = py - this.y;
+
+  const dist = Math.hypot(dx, dy);
+
+  if (dist < 2){
+    this.path.shift();
+    return;
   }
 
+  const speed = this.speed * deltaTime * 0.06;
+
+  this.x += (dx / dist) * speed;
+  this.y += (dy / dist) * speed;
+ }
   tryAttack(player) {
     if (this.attackCooldown > 0) return
 
