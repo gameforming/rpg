@@ -1,140 +1,307 @@
 // structures.js
 export class StructureManager {
+
   constructor() {
-    this.structures = {};       // naam -> grid array
-    this.metadata = {};         // naam -> {chance, rare}
+    this.structures = {};
+    this.metadata = {};
   }
 
-  // Voeg structuur toe
+  // -------------------------
+  // Structuur toevoegen
+  // -------------------------
   add(name, grid, options = {}) {
+
     this.structures[name] = grid;
+
     this.metadata[name] = {
-      chance: options.chance !== undefined ? options.chance : 0.2,
-      rare: options.rare !== undefined ? options.rare : false
+      chance: options.chance ?? 0.2,
+      rare: options.rare ?? false
     };
+
   }
 
-  // Haal structuur op
   get(name) {
     return this.structures[name] || null;
   }
 
-  // Laad alle txt files uit de map
+  // -------------------------
+  // TXT files laden
+  // -------------------------
   async loadAll(files) {
+
     for (const file of files) {
-      const name = file.replace(".txt","");
+
+      const name = file.replace(".txt", "");
+
       try {
+
         const res = await fetch(`structures/${file}`);
+
         if (!res.ok) {
           console.warn("STRUCTURES: file niet gevonden:", file);
           continue;
         }
+
         const text = await res.text();
-        const grid = text.split("\n").map(line => line.split(","));
+
+        const grid = text
+          .trim()
+          .split("\n")
+          .map(line => line.split(",").map(v => v.trim()));
+
         this.add(name, grid);
-        console.log("STRUCTURES: geladen", name);
-      } catch(e) {
-        console.error("STRUCTURES: fout bij laden", file, e);
+
+        console.log("STRUCTURE LOADED:", name);
+
+      } catch (e) {
+
+        console.error("STRUCTURE LOAD ERROR:", file, e);
+
       }
+
     }
+
   }
 
-  // Plaats structuur in wereld
+  // -------------------------
+  // CELL PARSER
+  // -------------------------
+  parseCell(cell) {
+
+    if (typeof cell !== "string") return cell;
+
+    const parts = cell.split(".");
+
+    let block = null;
+    let spawn = null;
+    let pathfinding = false;
+    let chestLuck = null;
+
+    for (let i = 0; i < parts.length; i++) {
+
+      const p = parts[i];
+
+      // spawn system
+      if (p === "spawn") {
+
+        spawn = parts[i + 1] || null;
+
+        if (parts.includes("p")) {
+          pathfinding = true;
+        }
+
+      }
+
+      // chest
+      if (p.startsWith("LT")) {
+
+        chestLuck = parseInt(p.substring(2)) || 1;
+
+      }
+
+      // block naam (eerste deel)
+      if (i === 0) {
+        block = p;
+      }
+
+    }
+
+    // chest tile
+    if (chestLuck !== null) {
+      return {
+        block: "chest",
+        type: "c",
+        luck: chestLuck
+      };
+    }
+
+    // spawn tile
+    if (spawn) {
+      return {
+        block: block,
+        spawn: spawn,
+        pathfinding: pathfinding
+      };
+    }
+
+    // normale block
+    return block;
+
+  }
+
+  // -------------------------
+  // Structuur plaatsen
+  // -------------------------
   placeStructure(world, structure, wx, wy) {
+
     const w = structure[0].length;
     const h = structure.length;
-    const grid = structure.map(row => row.slice());
 
-    for (let sy = 0; sy < h; sy++) {
-      for (let sx = 0; sx < w; sx++) {
-        let cell = grid[sy][sx];
+    const grid = [];
 
-        if (typeof cell === "string") {
-          // chest met loot
-          if (cell.startsWith("LT")) {
-            grid[sy][sx] = { block: "chest", type: "c", luck: parseInt(cell.substring(2)) || 1 };
-          }
-          // spawn syntax: spawn.zombie.p
-          else if (cell.startsWith("spawn.")) {
-            const parts = cell.split(".");
-            if (parts.length >= 3) {
-              const type = parts[1];       // enemy type
-              const subtype = parts[2];    // p = pathfinding, kan uitbreiden
-              grid[sy][sx] = { spawn: type, pathfinding: subtype === "p" };
-            } else {
-              grid[sy][sx] = { spawn: parts[1] };
-            }
-          }
-        }
+    for (let y = 0; y < h; y++) {
+
+      grid[y] = [];
+
+      for (let x = 0; x < w; x++) {
+
+        const raw = structure[y][x];
+
+        grid[y][x] = this.parseCell(raw);
+
       }
+
     }
 
-    // Voeg structuur toe aan wereld
-    world.structures.push({ x: wx, y: wy, w, h, grid });
+    world.structures.push({
+      x: wx,
+      y: wy,
+      w,
+      h,
+      grid
+    });
+
   }
 
-  // Check overlap
-  checkOverlap(structuresList, x, y, w, h) {
-    for (const s of structuresList) {
-      if (x < s.x + s.w && x + w > s.x && y < s.y + s.h && y + h > s.y) return true;
+  // -------------------------
+  // Overlap check
+  // -------------------------
+  checkOverlap(structures, x, y, w, h) {
+
+    for (const s of structures) {
+
+      if (
+        x < s.x + s.w &&
+        x + w > s.x &&
+        y < s.y + s.h &&
+        y + h > s.y
+      ) {
+        return true;
+      }
+
     }
+
     return false;
+
   }
 
-  // Spawn enemies in structure
+  // -------------------------
+  // Enemy spawns uitvoeren
+  // -------------------------
   handleSpawns(enemyManager, wx, wy, structure) {
-    for (let sy = 0; sy < structure.length; sy++) {
-      for (let sx = 0; sx < structure[sy].length; sx++) {
-        const cell = structure[sy][sx];
-        if (typeof cell === "object" && cell.spawn) {
-          const type = cell.spawn;
-          const pathfinding = cell.pathfinding || false;
-          enemyManager.spawn(type, wx + sx, wy + sy, pathfinding);
+
+    for (let y = 0; y < structure.length; y++) {
+
+      for (let x = 0; x < structure[y].length; x++) {
+
+        const raw = structure[y][x];
+
+        const cell = this.parseCell(raw);
+
+        if (cell && typeof cell === "object" && cell.spawn) {
+
+          const sx = wx + x;
+          const sy = wy + y;
+
+          enemyManager.spawn(
+            cell.spawn,
+            sx,
+            sy,
+            cell.pathfinding
+          );
+
+          console.log("SPAWN ENEMY:", cell.spawn, sx, sy);
+
         }
+
       }
+
     }
+
   }
 
-  // Kies random structuur op basis van kans
+  // -------------------------
+  // Random structuur kiezen
+  // -------------------------
   getRandomStructure() {
+
     const names = Object.keys(this.structures);
-    const filtered = names.filter(name => Math.random() < (this.metadata[name]?.chance || 0.2));
-    if (filtered.length === 0) return null;
-    const name = filtered[Math.floor(Math.random() * filtered.length)];
+
+    const possible = names.filter(name => {
+
+      const chance = this.metadata[name]?.chance ?? 0.2;
+
+      return Math.random() < chance;
+
+    });
+
+    if (!possible.length) return null;
+
+    const name = possible[Math.floor(Math.random() * possible.length)];
+
     return this.structures[name];
+
   }
 
-  // Spawn meerdere structuren in chunk
-  spawnStructuresInChunk(world, cx, cy, maxStructures=3) {
+  // -------------------------
+  // Spawn in chunk
+  // -------------------------
+  spawnStructuresInChunk(world, cx, cy, maxStructures = 3) {
+
     let spawned = 0;
+
     while (spawned < maxStructures) {
+
       const structure = this.getRandomStructure();
+
       if (!structure) break;
 
       const w = structure[0].length;
       const h = structure.length;
 
-      const wx = cx * world.chunkSize + Math.floor(Math.random() * (world.chunkSize - w));
-      const wy = cy * world.chunkSize + Math.floor(Math.random() * (world.chunkSize - h));
+      const wx =
+        cx * world.chunkSize +
+        Math.floor(Math.random() * (world.chunkSize - w));
+
+      const wy =
+        cy * world.chunkSize +
+        Math.floor(Math.random() * (world.chunkSize - h));
 
       if (this.checkOverlap(world.structures, wx, wy, w, h)) continue;
 
       this.placeStructure(world, structure, wx, wy);
 
-      if (world.enemyManager) this.handleSpawns(world.enemyManager, wx, wy, structure);
+      if (world.enemyManager) {
+
+        this.handleSpawns(world.enemyManager, wx, wy, structure);
+
+      }
 
       spawned++;
+
     }
+
   }
 
-  // ✅ Lijst van structuren + kans & rare
+  // -------------------------
+  // Debug lijst
+  // -------------------------
   getStructureList() {
+
     return Object.keys(this.structures).map(name => ({
+
       name,
-      chance: this.metadata[name]?.chance || 0.2,
-      rare: this.metadata[name]?.rare || false,
+
+      chance: this.metadata[name]?.chance ?? 0.2,
+
+      rare: this.metadata[name]?.rare ?? false,
+
       width: this.structures[name][0].length,
+
       height: this.structures[name].length
+
     }));
+
   }
+
 }
