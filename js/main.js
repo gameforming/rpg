@@ -45,6 +45,9 @@ canvas.addEventListener("mouseup", () => { mouseDown = false; });
 canvas.addEventListener("mousemove", e => { mouse.x = e.clientX; mouse.y = e.clientY; });
 
 window.addEventListener("keydown", e => {
+    
+    if (!player) return;
+
     const key = e.key.toLowerCase();
     if (!player.keys) player.keys = {};
     player.keys[key] = true;
@@ -54,10 +57,17 @@ window.addEventListener("keydown", e => {
     if (key === "arrowleft") selectedHotbar = (selectedHotbar - 1 + hotbar.length) % hotbar.length;
 });
 
+
 window.addEventListener("keyup", e => {
+
+    if (!player) return;
+
     const key = e.key.toLowerCase();
+
     if (!player.keys) player.keys = {};
+
     player.keys[key] = false;
+
 });
 
 window.addEventListener("wheel", e => {
@@ -207,7 +217,7 @@ canvas.addEventListener("mousedown", e => {
 
     const weapon = hotbar[selectedHotbar];
     if (weapon && weapon.damage && combat) {
-        combat.attack(enemiesManager.enemies, weapon, mouse.x, mouse.y, camera, performance.now());
+        combat.attack(weapon, mouse.x, mouse.y, camera, performance.now());
     }
 
     const wx = mouse.x + camera.x;
@@ -325,6 +335,7 @@ async function init() {
     window.enemies = new EnemyManager(world); // world doorgeven voor pathfinding
     await window.enemies.load();
     world.enemyManager = window.enemies; // toegankelijk voor structures en combat
+    enemiesManager = window.enemies;
 
     // --- StructureManager ---
     window.structures = new StructureManager();
