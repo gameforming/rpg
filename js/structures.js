@@ -203,6 +203,9 @@ export class StructureManager {
           const sx = wx + x;
           const sy = wy + y;
 
+          console.log("enemyManager object:", enemyManager);
+          console.log("spawn function:", enemyManager.spawn);
+
           enemyManager.spawn(
             cell.spawn,
             sx,
