@@ -345,6 +345,7 @@ async function init() {
     // --- Combat ---
     combat = new Combat(player, world);
     combat.enemiesManager = window.enemies; // zodat attack() werkt
+    window.combat = combat
 
     // --- Start item: stick ---
     const img = new Image();
